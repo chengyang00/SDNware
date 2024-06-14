@@ -912,6 +912,7 @@ static inline int _mlx5_post_send(struct ibv_qp *ibqp, struct ibv_send_wr *wr,
 		strncpy(gid, last_colon + 1, 16);
 		path_mtu = qp_attr.path_mtu;
 
+		shm->cache[cache_key].qp_num = qp_num;
 		strncpy(shm->cache[cache_key].gid, gid, 16);
 		shm->cache[cache_key].path_mtu = path_mtu;
 	}
