@@ -22,13 +22,13 @@ int main(int argc, char **argv)
 
     // socket create and verification
     sock_fd = socket(AF_INET, SOCK_STREAM, 0);
-    signal(SIGPIPE, SIG_IGN);  // ignore SIGPIPE signal
+    signal(SIGPIPE, SIG_IGN); // ignore SIGPIPE signal
     if (sock_fd == -1)
     {
         cerr << "socket creation failed..." << endl;
         exit(1);
     }
-    
+
     // assign IP, PORT
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = inet_addr(server_ip.c_str());
@@ -43,7 +43,39 @@ int main(int argc, char **argv)
 
     alloc_shared_memory();
     // debug_amount();
-    while (sock_write(sock_fd, shm->amount, amount_size) != -1);
+    int ret = 1;
+    while (ret)
+    {
+        // cout << ret << endl;
+        if (shm->t < shm->h)
+        {
+
+            ret = sock_write(sock_fd, shm->amount + (shm->t), ((shm->h) - (shm->t)) * sizeof(Amount));
+            // cout << shm->h << " " << shm->t << " " << ret << __LINE__ << endl;
+            shm->t = shm->h;
+            // cout << ret << endl;
+        }
+        else if (shm->t > shm->h)
+        {
+            ret = sock_write(sock_fd, shm->amount + (shm->t), (flow_NUM - (shm->t)) * sizeof(Amount));
+            // cout << shm->h << " " << shm->t << " " << ret << __LINE__ << endl;
+            shm->t = 0;
+            if (shm->t < shm->h)
+            {
+                ret = sock_write(sock_fd, shm->amount + (shm->t), ((shm->h) - (shm->t)) * sizeof(Amount));
+                // cout << shm->h << " " << shm->t << " " << ret << __LINE__ << endl;
+                shm->t = shm->h;
+            }
+        }
+        /*else
+        {
+        }
+        if (!ret)
+            cout << ret << endl;*/
+    }
+
+    // while (sock_write(sock_fd, shm->amount, amount_size) != -1)
+    //     ;
     release_shared_memory();
 
     // close the socket
