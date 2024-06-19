@@ -179,8 +179,6 @@ void add_send_rec(Amount *amount, string &ip, int len)
         }
         if (amount[j].tx + amount[j].rx > 4096)
             cout << ip << " " << dip << " " << amount[j].tx << " " << amount[j].rx << " " << amount[j].tm << " " << amount[j].wr_id << endl;
-        // send_rec[ip][dip] += amount[j].tx;
-        // send_rec[dip][ip] += amount[j].rx;
     }
 }
 
@@ -256,6 +254,7 @@ int main()
     {
         int size = 0;
         // set_rec_zero();
+        pthread_mutex_lock(&(shm->lock));
         if ((shm->t) < (shm->h))
         {
             size += ((shm->h) - (shm->t));
@@ -274,6 +273,7 @@ int main()
                 shm->t = shm->h;
             }
         }
+        pthread_mutex_unlock(&(shm->lock));
         for (int i = 0; i < client_num; i++)
         {
 

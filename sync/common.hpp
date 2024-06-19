@@ -50,6 +50,7 @@ typedef struct
 
 typedef struct
 {
+    pthread_mutex_t lock;
     int t, h;
     Amount amount[flow_NUM];
     Cache cache[CACHE_NUM];
@@ -132,6 +133,10 @@ int alloc_shared_memory()
     }
     shm = (SHM *)shmat(shmid, NULL, 0); // associate shared memory with this process
     bzero(shm, shm_size);
+    pthread_mutexattr_t attr;
+    pthread_mutexattr_init(&attr);
+    pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+    pthread_mutex_init(&(shm->lock), &attr);
     return 0;
 }
 

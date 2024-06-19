@@ -47,6 +47,7 @@ int main(int argc, char **argv)
     while (ret)
     {
         // cout << ret << endl;
+        pthread_mutex_lock(&(shm->lock));
         if (shm->t < shm->h)
         {
 
@@ -67,6 +68,7 @@ int main(int argc, char **argv)
                 shm->t = shm->h;
             }
         }
+        pthread_mutex_unlock(&(shm->lock));
         /*else
         {
         }

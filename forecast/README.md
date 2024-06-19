@@ -12,7 +12,7 @@ bash build.sh
 ```
 Linux系统中的`/usr/lib/x86_64-linux-gnu/libibverbs.so.1`是一个软链接，默认连接到动态链接库`/usr/lib/x86_64-linux-gnu/libibverbs.so.1.14.37.0`（这里的libibverbs是1.14.37版本，不同系统的版本可能不一样）。我们需要将这个软链接连接到我们修改后的动态链接库：（我修改的rdma-core版本为1.14.37.8）
 ```
-sudo ln -sf /home/sdn/yc/rdma-core-37.8/build/lib/libibverbs.so.1.14.37.8 /usr/lib/x86_64-linux-gnu/libibverbs.so.1
+sudo ln -sf /home/sdn/ybd/rdma-core-37.8/build/lib/libibverbs.so.1.14.37.8 /usr/lib/x86_64-linux-gnu/libibverbs.so.1
 ```
 恢复这个软链接到默认库的指令：
 ```

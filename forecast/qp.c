@@ -873,6 +873,7 @@ typedef struct
 
 typedef struct
 {
+	pthread_mutex_t lock;
 	int t, h;
 	Amount amount[FLOW_NUM];
 	Cache cache[CACHE_NUM];
@@ -1009,34 +1010,23 @@ static inline int _mlx5_post_send(struct ibv_qp *ibqp, struct ibv_send_wr *wr,
 			}
 		}
 	}
-	strncpy(shm->amount[shm->h].gid, gid, 16);
-	shm->amount[shm->h].rx = recv_amount;
-	shm->amount[shm->h].tx = send_amount;
-	shm->amount[shm->h].qp_num = shm->cache[cache_key].qp_num;
-	shm->amount[shm->h].wr_id = wr->wr_id;
-	struct timespec timestamp;
-	clock_gettime(0, &timestamp);
-	long long sec = timestamp.tv_sec;
-	long long nsec = timestamp.tv_nsec;
-	shm->amount[shm->h].tm = sec * 1000000000 + nsec;
-	shm->h++;
-	shm->h %= FLOW_NUM;
-	/*for (int i = 0; i < GID_NUM; i++)
+	if (recv_amount + send_amount > 4096)
 	{
-		if (strcmp(shm->amount[i].gid, gid) == 0)
-		{
-			shm->amount[i].rx += recv_amount;
-			shm->amount[i].tx += send_amount;
-			break;
-		}
-		else if (strcmp(shm->amount[i].gid, "\0") == 0)
-		{
-			strncpy(shm->amount[i].gid, gid, 16);
-			shm->amount[i].rx += recv_amount;
-			shm->amount[i].tx += send_amount;
-			break;
-		}
-	}*/
+		pthread_mutex_lock(&(shm->lock));
+		strncpy(shm->amount[shm->h].gid, gid, 16);
+		shm->amount[shm->h].rx = recv_amount;
+		shm->amount[shm->h].tx = send_amount;
+		shm->amount[shm->h].qp_num = shm->cache[cache_key].qp_num;
+		shm->amount[shm->h].wr_id = wr->wr_id;
+		struct timespec timestamp;
+		clock_gettime(0, &timestamp);
+		long long sec = timestamp.tv_sec;
+		long long nsec = timestamp.tv_nsec;
+		shm->amount[shm->h].tm = sec * 1000000000 + nsec;
+		shm->h++;
+		shm->h %= FLOW_NUM;
+		pthread_mutex_unlock(&(shm->lock));
+	}
 
 	shmdt(shm); // disassociate shared momory from this process
 	/* forecast end */
