@@ -171,14 +171,14 @@ void add_send_rec(Amount *amount, string &ip, int len)
         string dip(amount[j].gid);
         if (amount[j].tx > 4096)
         {
-            get_route(ip, dip);
+            // get_route(ip, dip);
         }
         if (amount[j].rx > 4096)
         {
-            get_route(dip, ip);
+            // get_route(dip, ip);
         }
-        // if (amount[j].tx + amount[j].rx > 4096)
-        cout << amount[j].gid << " " << amount[j].tx << " " << amount[j].rx << " " << amount[j].tm << " " << amount[j].wr_id << endl;
+        if (amount[j].tx + amount[j].rx > 4096)
+            cout << ip << " " << dip << " " << amount[j].tx << " " << amount[j].rx << " " << amount[j].tm << " " << amount[j].wr_id << endl;
         // send_rec[ip][dip] += amount[j].tx;
         // send_rec[dip][ip] += amount[j].rx;
     }
@@ -204,7 +204,6 @@ int main()
     }
     int client_num = send_rec.size();
     struct sockaddr_in client_addr[client_num];
-    // std::cout << __LINE__ << std::endl;
     //  socket create and verification
     sock_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (sock_fd == -1)
@@ -225,7 +224,6 @@ int main()
         exit(1);
     }
     listen(sock_fd, client_num);
-    // std::cout << __LINE__ << std::endl;
     //  build the connection with clients
     map<int, string> fd_to_ip;
     vector<int> fds;
@@ -245,7 +243,7 @@ int main()
         fds.push_back(connect_fd);
         fd_to_ip[connect_fd] = inet_ntoa(client_addr[i].sin_addr);
     }
-    // std::cout << __LINE__ << std::endl;
+
     //  receive traffic prediction
     alloc_shared_memory();
     // auto start = chrono::high_resolution_clock::now();
@@ -257,7 +255,6 @@ int main()
     do
     {
         int size = 0;
-        // std::cout << __LINE__ << std::endl;
         // set_rec_zero();
         if ((shm->t) < (shm->h))
         {
@@ -277,11 +274,9 @@ int main()
                 shm->t = shm->h;
             }
         }
-        // if (size)
-        //  cout << "size:" << size << " " << shm->t << " " << shm->h << " " << endl;
         for (int i = 0; i < client_num; i++)
         {
-            // std::cout << __LINE__ << std::endl;
+
             Amount *cli_amount = (Amount *)calloc(sizeof(Amount), flow_NUM);
             string ip = fd_to_ip[fds[i]];
             int read_tal = 0;
@@ -293,13 +288,7 @@ int main()
             size += read_tal / sizeof(Amount);
             free(cli_amount);
         }
-        // if (size)
-        //  cout << "size::" << size << endl;
 
-        // clock_gettime(0, &timestamp);
-        // while ((timestamp.tv_sec - sec) * 1000000000 + timestamp.tv_nsec - nsec)
-        // clock_gettime(0, &timestamp);
-        // std::cout << __LINE__ << std::endl;
         // if (size > 0)
         // ret = write_send_record();
         // if (ret < 0)
