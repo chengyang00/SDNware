@@ -244,16 +244,10 @@ int main()
 
     //  receive traffic prediction
     alloc_shared_memory();
-    // auto start = chrono::high_resolution_clock::now();
-    // chrono::microseconds duration;
-    struct timespec timestamp;
-    clock_gettime(0, &timestamp);
-    long long sec = timestamp.tv_sec;
-    long long nsec = timestamp.tv_nsec;
     do
     {
+        sleep_u(1);
         int size = 0;
-        // set_rec_zero();
         pthread_mutex_lock(&(shm->lock));
         if ((shm->t) < (shm->h))
         {
@@ -276,7 +270,6 @@ int main()
         pthread_mutex_unlock(&(shm->lock));
         for (int i = 0; i < client_num; i++)
         {
-
             Amount *cli_amount = (Amount *)calloc(sizeof(Amount), flow_NUM);
             string ip = fd_to_ip[fds[i]];
             int read_tal = 0;
@@ -288,14 +281,7 @@ int main()
             size += read_tal / sizeof(Amount);
             free(cli_amount);
         }
-
-        // if (size > 0)
-        // ret = write_send_record();
-        // if (ret < 0)
-        // exit(1);
-        // auto end = chrono::high_resolution_clock::now();
-        // duration = chrono::duration_cast<chrono::microseconds>(end - start);
-    } while (true /*duration.count() < TIME*/);
+    } while (true);
     release_shared_memory();
 
     // close socket

@@ -201,3 +201,22 @@ public:
 network cur_net;
 
 void init_cur_net(void);
+
+void sleep_u(int usec)
+{
+    struct timespec timestamp;
+    clock_gettime(0, &timestamp);
+    long long sec = timestamp.tv_sec;
+    long long nsec = timestamp.tv_nsec;
+    while (true)
+    {
+        struct timespec timestamp;
+        clock_gettime(0, &timestamp);
+        long long _sec = timestamp.tv_sec;
+        long long _nsec = timestamp.tv_nsec;
+        if ((_sec - sec) * 1000000000 + _nsec - nsec > usec * 1000)
+        {
+            break;
+        }
+    }
+}

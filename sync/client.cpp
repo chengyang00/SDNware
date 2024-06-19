@@ -46,40 +46,25 @@ int main(int argc, char **argv)
     int ret = 1;
     while (ret)
     {
-        // cout << ret << endl;
+        sleep_u(1);
         pthread_mutex_lock(&(shm->lock));
         if (shm->t < shm->h)
         {
-
             ret = sock_write(sock_fd, shm->amount + (shm->t), ((shm->h) - (shm->t)) * sizeof(Amount));
-            // cout << shm->h << " " << shm->t << " " << ret << __LINE__ << endl;
             shm->t = shm->h;
-            // cout << ret << endl;
         }
         else if (shm->t > shm->h)
         {
             ret = sock_write(sock_fd, shm->amount + (shm->t), (flow_NUM - (shm->t)) * sizeof(Amount));
-            // cout << shm->h << " " << shm->t << " " << ret << __LINE__ << endl;
             shm->t = 0;
             if (shm->t < shm->h)
             {
                 ret = sock_write(sock_fd, shm->amount + (shm->t), ((shm->h) - (shm->t)) * sizeof(Amount));
-                // cout << shm->h << " " << shm->t << " " << ret << __LINE__ << endl;
                 shm->t = shm->h;
             }
         }
         pthread_mutex_unlock(&(shm->lock));
-        /*else
-        {
-        }
-        if (!ret)
-            cout << ret << endl;*/
     }
-
-    // while (sock_write(sock_fd, shm->amount, amount_size) != -1)
-    //     ;
     release_shared_memory();
-
-    // close the socket
     close(sock_fd);
 }
