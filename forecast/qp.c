@@ -959,38 +959,54 @@ static inline int _mlx5_post_send(struct ibv_qp *ibqp, struct ibv_send_wr *wr,
 			}
 			tmp_wr = tmp_wr->next;
 			uint64_t num_packet = (length + mtu - 1) / mtu;
-			uint64_t tmp_recv = 0, tmp_send = 0;
-			tmp_recv = tmp_send = num_packet * packet_header + length;
+			// num_packet *packet_header + length;
+			//
 			if (wr_opcode == IBV_WR_RDMA_READ)
 			{
-				tmp_recv += 4; // AETH of READ FIRST or ONLY
+				recv_amount +=
+					num_packet * packet_header + length;
+				recv_amount += 4; // AETH of READ FIRST or ONLY
 				if (length > mtu)
-					tmp_recv += 4; // AETH of READ LAST
-				tmp_send = 78;
+					recv_amount += 4; // AETH of READ LAST
+				send_amount = 78;
 			}
 			else
 			{
-				tmp_recv = length > mtu ? 66 * 2 : 66;
+				recv_amount = length > mtu ? 66 * 2 : 66;
 				if (wr_opcode == IBV_WR_SEND_WITH_IMM)
 				{
-					tmp_send += 4;
+					send_amount +=
+						num_packet * packet_header +
+						length;
+					send_amount += 4;
 				}
 				else if (wr_opcode == IBV_WR_RDMA_WRITE)
 				{
-					tmp_send += 16;
+					send_amount +=
+						num_packet * packet_header +
+						length;
+					send_amount += 16;
 				}
-				else if (wr_opcode == IBV_WR_RDMA_WRITE_WITH_IMM)
+				else if (wr_opcode ==
+						 IBV_WR_RDMA_WRITE_WITH_IMM)
 				{
-					tmp_send += 20;
+					send_amount +=
+						num_packet * packet_header +
+						length;
+					send_amount += 20;
 				}
-				else if (wr_opcode == IBV_WR_ATOMIC_FETCH_AND_ADD || wr_opcode == IBV_WR_ATOMIC_CMP_AND_SWP)
+				else if (wr_opcode ==
+							 IBV_WR_ATOMIC_FETCH_AND_ADD ||
+						 wr_opcode ==
+							 IBV_WR_ATOMIC_CMP_AND_SWP)
 				{
-					tmp_send += 90; // AtomicETH
-					tmp_recv = 74;
+					send_amount +=
+						num_packet * packet_header +
+						length;
+					send_amount += 90; // AtomicETH
+					recv_amount = 74;
 				}
 			}
-			send_amount += tmp_send;
-			recv_amount += tmp_recv;
 		}
 	}
 	strncpy(shm->amount[shm->h].gid, gid, 16);
