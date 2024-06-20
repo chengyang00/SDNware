@@ -165,7 +165,7 @@ void add_send_rec(Amount *amount, string &ip, int len)
 
     for (int j = 0; j < len; j++)
     {
-
+        cout << __LINE__ << " " << j << endl;
         if (strcmp(amount[j].gid, "\0") == 0)
             break;
         string dip(amount[j].gid);
@@ -177,8 +177,8 @@ void add_send_rec(Amount *amount, string &ip, int len)
         {
             // get_route(dip, ip);
         }
-        if (amount[j].tx + amount[j].rx > 4096)
-            cout << ip << " " << dip << " " << amount[j].tx << " " << amount[j].rx << " " << amount[j].tm << " " << amount[j].wr_id << endl;
+        // if (amount[j].tx + amount[j].rx > 4096)
+        cout << ip << " " << dip << " " << amount[j].tx << " " << amount[j].rx << " " << amount[j].tm << " " << amount[j].wr_id << endl;
     }
 }
 
@@ -246,9 +246,9 @@ int main()
     alloc_shared_memory();
     do
     {
-        sleep_u(1);
-        int size = 0;
+        sleep_u(1000);
         pthread_mutex_lock(&(shm->lock));
+        int size = 0;
         if ((shm->t) < (shm->h))
         {
             size += ((shm->h) - (shm->t));

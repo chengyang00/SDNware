@@ -947,6 +947,7 @@ static inline int _mlx5_post_send(struct ibv_qp *ibqp, struct ibv_send_wr *wr,
 		struct ibv_send_wr *tmp_wr = wr;
 		while (tmp_wr)
 		{
+			uint64_t _send_amount = 0, _recv_amount = 0;
 			sge = tmp_wr->sg_list;
 			uint64_t length = 0;
 			enum ibv_wr_opcode wr_opcode = tmp_wr->opcode;
@@ -960,59 +961,47 @@ static inline int _mlx5_post_send(struct ibv_qp *ibqp, struct ibv_send_wr *wr,
 			}
 			tmp_wr = tmp_wr->next;
 			uint64_t num_packet = (length + mtu - 1) / mtu;
-			// num_packet *packet_header + length;
-			//
+			_send_amount = _recv_amount =
+				length + num_packet * packet_header;
 			if (wr_opcode == IBV_WR_RDMA_READ)
 			{
-				recv_amount +=
-					num_packet * packet_header + length;
-				recv_amount += 4; // AETH of READ FIRST or ONLY
+				_recv_amount += 4; // AETH of READ FIRST or ONLY
 				if (length > mtu)
-					recv_amount += 4; // AETH of READ LAST
-				send_amount = 78;
+					_recv_amount += 4; // AETH of READ LAST
+				_send_amount = 78;
 			}
 			else
 			{
-				recv_amount = length > mtu ? 66 * 2 : 66;
+				_recv_amount = length > mtu ? 66 * 2 : 66;
 				if (wr_opcode == IBV_WR_SEND_WITH_IMM)
 				{
-					send_amount +=
-						num_packet * packet_header +
-						length;
-					send_amount += 4;
+					_send_amount += 4;
 				}
 				else if (wr_opcode == IBV_WR_RDMA_WRITE)
 				{
-					send_amount +=
-						num_packet * packet_header +
-						length;
-					send_amount += 16;
+					_send_amount += 16;
 				}
 				else if (wr_opcode ==
 						 IBV_WR_RDMA_WRITE_WITH_IMM)
 				{
-					send_amount +=
-						num_packet * packet_header +
-						length;
-					send_amount += 20;
+					_send_amount += 20;
 				}
 				else if (wr_opcode ==
 							 IBV_WR_ATOMIC_FETCH_AND_ADD ||
 						 wr_opcode ==
 							 IBV_WR_ATOMIC_CMP_AND_SWP)
 				{
-					send_amount +=
-						num_packet * packet_header +
-						length;
-					send_amount += 90; // AtomicETH
-					recv_amount = 74;
+					_send_amount += 90; // AtomicETH
+					_recv_amount = 74;
 				}
 			}
+			send_amount += _send_amount;
+			recv_amount += _recv_amount;
 		}
 	}
 	if (recv_amount + send_amount > 4096)
 	{
-		pthread_mutex_lock(&(shm->lock));
+		pthread_mutex_lock(&shm->lock);
 		strncpy(shm->amount[shm->h].gid, gid, 16);
 		shm->amount[shm->h].rx = recv_amount;
 		shm->amount[shm->h].tx = send_amount;
@@ -1025,7 +1014,7 @@ static inline int _mlx5_post_send(struct ibv_qp *ibqp, struct ibv_send_wr *wr,
 		shm->amount[shm->h].tm = sec * 1000000000 + nsec;
 		shm->h++;
 		shm->h %= FLOW_NUM;
-		pthread_mutex_unlock(&(shm->lock));
+		pthread_mutex_unlock(&shm->lock);
 	}
 
 	shmdt(shm); // disassociate shared momory from this process

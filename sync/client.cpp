@@ -46,7 +46,7 @@ int main(int argc, char **argv)
     int ret = 1;
     while (ret)
     {
-        sleep_u(1);
+        sleep_u(1000);
         pthread_mutex_lock(&(shm->lock));
         if (shm->t < shm->h)
         {
