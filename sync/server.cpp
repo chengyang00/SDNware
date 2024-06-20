@@ -165,7 +165,7 @@ void add_send_rec(Amount *amount, string &ip, int len)
 
     for (int j = 0; j < len; j++)
     {
-        cout << __LINE__ << " " << j << endl;
+        // cout << __LINE__ << " " << j << endl;
         if (strcmp(amount[j].gid, "\0") == 0)
             break;
         string dip(amount[j].gid);
