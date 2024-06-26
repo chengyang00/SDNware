@@ -101,7 +101,6 @@ void get_port_idx_from_ip(std::string ip)
 void init_cur_net(void);
 map<string, map<string, uint64_t>> send_rec;
 map<std::string, map<std::string, bool>> route_update;   // 上一次路由更新时间
-map<std::string, map<std::string, double>> cur_speed;    // 发送速度
 map<std::string, map<std::string, long long>> last_flow; // 上一条流的到达时间
 
 void get_route(std::string ss, std::string dd) // 计算源目节点之间的最宽路径
