@@ -126,7 +126,6 @@ ssize_t sock_write(int sock_fd, void *buffer, size_t len)
 int alloc_shared_memory()
 {
     shmid = shmget(KEY_DATA, shm_size, IPC_CREAT | 0666);
-    cout << shmid << endl;
     if (shmid < 0)
     {
         fprintf(stderr, "Creating shared memory failed\n");
