@@ -179,7 +179,6 @@ bool get_route_update(std::string sip, std::string dip) // 查看源目节点之
     }
     return route_update[sip][dip];
 }
-
 void add_send_rec(Amount *amount, string &ip, int len) // 处理client发送的数据
 {
     for (int j = 0; j < len; j++)
@@ -189,8 +188,8 @@ void add_send_rec(Amount *amount, string &ip, int len) // 处理client发送的�
         string dip(amount[j].gid);
         if (amount[j].tx > 4096)
         {
+
             double speed = amount[j].tx * 8 * 1000000000 / (amount[j].tm - last_flow[ip][dip]);
-            cur_speed[ip][dip] = speed;
             last_flow[ip][dip] = amount[j].tm;
             if (speed > 1000000000 && !get_route_update(ip, dip))
             {
@@ -199,13 +198,13 @@ void add_send_rec(Amount *amount, string &ip, int len) // 处理client发送的�
             }
             else if (speed < 1000000000 && get_route_update(ip, dip))
             {
-                route_update[dip][ip] = false;
+                route_update[ip][dip] = false;
             }
         }
         if (amount[j].rx > 4096)
         {
-            long long speed = amount[j].rx * 8 * 1000000000 / (amount[j].tm - last_flow[ip][dip]);
-            cur_speed[dip][ip] = speed;
+
+            long long speed = amount[j].rx * 8 * 1000000000 / (amount[j].tm - last_flow[dip][ip]);
             last_flow[dip][ip] = amount[j].tm;
             if (speed > 1000000000 && !get_route_update(dip, ip))
             {
@@ -217,7 +216,6 @@ void add_send_rec(Amount *amount, string &ip, int len) // 处理client发送的�
                 route_update[dip][ip] = false;
             }
         }
-        //cout << ip << " " << dip << " " << amount[j].tx << " " << amount[j].rx << " " << amount[j].tm << " " << amount[j].wr_id << endl;
     }
 }
 
