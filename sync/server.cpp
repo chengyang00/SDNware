@@ -61,7 +61,6 @@ void init_topo()
     ip_sw["172.16.6.1"] = 1;
     ip_sw["172.16.7.1"] = 1;
     ip_sw["172.16.8.1"] = 1;
-    cout << __LINE__ << endl;
     cur_net_name = get_network();
     int n_dev = 0;
     for (auto dev : dev_list)
@@ -70,7 +69,6 @@ void init_topo()
         topo.emplace_back();
         n_dev += 1;
     }
-    cout << __LINE__ << endl;
     for (auto &t : topo)
     {
 
@@ -79,13 +77,6 @@ void init_topo()
         t.emplace_back();
         t.emplace_back();
     }
-    cout << __LINE__ << endl;
-    cout << topo.size() << endl;
-    if (topo.size() > 0)
-    {
-        cout << topo[0].size() << endl;
-    }
-    cout << __LINE__ << endl;
     topo[0][2].push_back(port(std::string("eth-0-5"), 1, std::string("up"), 5));
     topo[0][2].push_back(port(std::string("eth-0-6"), 0, std::string("up"), 6));
     topo[0][3].push_back(port(std::string("eth-0-7"), 1, std::string("up"), 7));
@@ -102,7 +93,6 @@ void init_topo()
     topo[3][0].push_back(port(std::string("eth-0-2"), 0, std::string("up"), 2));
     topo[3][1].push_back(port(std::string("eth-0-3"), 1, std::string("up"), 3));
     topo[3][1].push_back(port(std::string("eth-0-4"), 1, std::string("up"), 4));
-    cout << __LINE__ << endl;
 }
 void get_port_idx_from_ip(std::string ip)
 {
@@ -227,7 +217,7 @@ void add_send_rec(Amount *amount, string &ip, int len) // 处理client发送的�
                 route_update[dip][ip] = false;
             }
         }
-        cout << ip << " " << dip << " " << amount[j].tx << " " << amount[j].rx << " " << amount[j].tm << " " << amount[j].wr_id << endl;
+        //cout << ip << " " << dip << " " << amount[j].tx << " " << amount[j].rx << " " << amount[j].tm << " " << amount[j].wr_id << endl;
     }
 }
 
@@ -237,7 +227,6 @@ int sock_fd;
 
 void connect_client()
 {
-    std::cout << __LINE__ << std::endl;
     int ret;
     socklen_t addr_len = sizeof(struct sockaddr_in);
     struct sockaddr_in server_addr;
@@ -256,7 +245,6 @@ void connect_client()
         exit(1);
     }
     // assign IP, PORT
-    std::cout << __LINE__ << std::endl;
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     server_addr.sin_port = htons(PORT);
