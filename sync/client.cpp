@@ -1,24 +1,18 @@
 #include "common.hpp"
 
-// void debug_amount()
-// {
-//     strcpy(amount[0].gid, "::ffff:172.16.210.35");
-//     amount[0].rx = 1000;
-//     amount[0].tx = 2000;
-// }
-
-// void print_amout()
-// {
-//     cout << "amount[0].tx: " << amount[0].tx << endl;
-//     cout << "amount[0].rx: " << amount[0].rx << endl;
-// }
-
 int main(int argc, char **argv)
 {
     int sock_fd, option, addr_len = sizeof(struct sockaddr_in);
     struct sockaddr_in server_addr;
     bzero(&server_addr, sizeof(server_addr));
-    read_server_list();
+    if (argc > 1)
+    {
+        server_ip = argv[1];
+    }
+    else
+    {
+        server_ip = "172.16.5.1";
+    }
 
     // socket create and verification
     sock_fd = socket(AF_INET, SOCK_STREAM, 0);

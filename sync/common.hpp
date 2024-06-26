@@ -21,11 +21,12 @@
 #include <vector>
 #include <chrono>
 #include <unordered_map>
+#include <thread>
 using namespace std;
 
 /* traffic statistics */
 #define KEY_DATA 16789824
-#define flow_NUM 1000
+#define flow_NUM 10000
 #define CACHE_NUM 521
 #define PORT 15678
 #define MICROSECONDS_PER_SECOND 1000000
@@ -147,60 +148,6 @@ int release_shared_memory()
     shmctl(shmid, IPC_RMID, NULL); // delete shared memory
     return 0;
 }
-
-int read_server_list()
-{
-    ifstream file("server.txt");
-    if (file.is_open())
-    {
-        getline(file, server_ip);
-        file.close();
-    }
-    else
-    {
-        cerr << "unable to open file." << endl;
-        return -1;
-    }
-    return 0;
-}
-
-map<std::string, int> ip_sw;
-std::vector<std::vector<std::vector<int>>> topo;
-int n_sw;
-void init_topo(void);
-void get_route(std::string, std::string);
-class port
-{
-public:
-    std::string name;
-    int sw_num;
-    int port_num;
-    int nrb_sw_num;
-    int nrb_port_num;
-    long long rate;
-    std::string status;
-    port(std::string _name, int _sw_num, int _port_num, int nrb_sw_num, int nrb_port_num, long long rate, std::string _status) : name(_name), sw_num(_sw_num), port_num(_port_num) {}
-};
-class dev
-{
-public:
-    std::string name;
-    std::string ip;
-    std::vector<std::vector<port>> nrb_port_list;
-    dev(std::string _name, std::string _ip) : name(_name), ip(ip) {}
-    dev() = default;
-};
-class network
-{
-public:
-    std::string name;
-    std::vector<dev> dev_list;
-    std::unordered_map<std::string, int> dev_name_to_idx;
-};
-
-network cur_net;
-
-void init_cur_net(void);
 
 void sleep_u(int usec)
 {

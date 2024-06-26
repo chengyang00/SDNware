@@ -1,30 +1,57 @@
 #include "common.hpp"
 
-map<string, map<string, uint64_t>> send_rec;
-
-int read_client_list()
+class port // 端口
 {
-    ifstream file("client.txt");
-    if (file.is_open())
-    {
-        string ip;
-        while (getline(file, ip))
-        {
-            send_rec[ip] = map<string, uint64_t>{};
-        }
-        file.close();
-    }
-    else
-    {
-        cerr << "unable to open file." << endl;
-        return -1;
-    }
-    return 0;
+public:
+    std::string name;
+    long long rate; // 发送速率
+    std::string status;
+    int idx; // 序号
+    port(std::string _name,
+         long long _rate,
+         std::string _status,
+         int _idx) : name(_name), rate(_rate), status(_status), idx(_idx) {}
+    port() {}
+};
+
+class dev
+{
+public:
+    std::string ip;
+    std::string name;
+    dev(std::string _ip,
+        std::string _name) : ip(_ip), name(_name) {}
+};
+
+class route_node
+{
+public:
+    std::string name;
+    std::string port;
+    route_node *next;
+};
+class route
+{
+    int seq;
+    route_node *first;
+};
+
+map<std::string, int> ip_sw; // 服务器ip映射到交换机序号
+int n_sw;                    // 交换机数量
+std::string cur_net_name;    // 网络名称
+std::vector<dev> dev_list    /*设备列表*/
+    = {dev("172.16.50.231", "leaf1"), dev("172.15.50.231", "leaf2"), dev("172.16.50.233", "spain1"), dev("172.16.50.234", "spain2")};
+std::map<std::string, int> dev_name_to_idx;                 // 设备名映射序号
+std::vector<std::vector<std::vector<port>>> topo;           // 拓扑
+std::map<std::string, std::map<std::string, route>> routes; // 路由集合
+std::string get_network()
+{
+    // todo
+    return "test";
 }
+
 void init_topo()
 {
-
-    // 调用控制器，待完成
     n_sw = 4;
     ip_sw["172.16.1.1"] = 0;
     ip_sw["172.16.2.1"] = 0;
@@ -34,49 +61,71 @@ void init_topo()
     ip_sw["172.16.6.1"] = 1;
     ip_sw["172.16.7.1"] = 1;
     ip_sw["172.16.8.1"] = 1;
-    for (int i = 0; i < n_sw; i++)
+    cout << __LINE__ << endl;
+    cur_net_name = get_network();
+    int n_dev = 0;
+    for (auto dev : dev_list)
     {
-        topo.push_back(std::vector<std::vector<int>>());
-        for (int j = 0; j < n_sw; j++)
-        {
-            topo[i].push_back(std::vector<int>());
-        }
+        dev_name_to_idx[dev.name] = n_dev;
+        topo.emplace_back();
+        n_dev += 1;
     }
-    topo[0][2].push_back(1);
-    topo[0][2].push_back(0);
-    topo[0][3].push_back(1);
-    topo[0][3].push_back(1);
-    topo[1][2].push_back(0);
-    topo[1][2].push_back(1);
-    topo[1][3].push_back(1);
-    topo[1][3].push_back(1);
-    topo[2][0].push_back(1);
-    topo[2][0].push_back(0);
-    topo[3][0].push_back(1);
-    topo[3][0].push_back(1);
-    topo[2][1].push_back(1);
-    topo[2][1].push_back(0);
-    topo[3][1].push_back(1);
-    topo[3][1].push_back(1);
+    cout << __LINE__ << endl;
+    for (auto &t : topo)
+    {
+
+        t.emplace_back();
+        t.emplace_back();
+        t.emplace_back();
+        t.emplace_back();
+    }
+    cout << __LINE__ << endl;
+    cout << topo.size() << endl;
+    if (topo.size() > 0)
+    {
+        cout << topo[0].size() << endl;
+    }
+    cout << __LINE__ << endl;
+    topo[0][2].push_back(port(std::string("eth-0-5"), 1, std::string("up"), 5));
+    topo[0][2].push_back(port(std::string("eth-0-6"), 0, std::string("up"), 6));
+    topo[0][3].push_back(port(std::string("eth-0-7"), 1, std::string("up"), 7));
+    topo[0][3].push_back(port(std::string("eth-0-8"), 1, std::string("up"), 8));
+    topo[1][2].push_back(port(std::string("eth-0-5"), 1, std::string("up"), 5));
+    topo[1][2].push_back(port(std::string("eth-0-6"), 1, std::string("up"), 6));
+    topo[1][3].push_back(port(std::string("eth-0-7"), 0, std::string("up"), 7));
+    topo[1][3].push_back(port(std::string("eth-0-8"), 1, std::string("up"), 8));
+    topo[2][0].push_back(port(std::string("eth-0-1"), 1, std::string("up"), 1));
+    topo[2][0].push_back(port(std::string("eth-0-2"), 1, std::string("up"), 2));
+    topo[2][1].push_back(port(std::string("eth-0-3"), 0, std::string("up"), 3));
+    topo[2][1].push_back(port(std::string("eth-0-4"), 1, std::string("up"), 4));
+    topo[3][0].push_back(port(std::string("eth-0-1"), 1, std::string("up"), 1));
+    topo[3][0].push_back(port(std::string("eth-0-2"), 0, std::string("up"), 2));
+    topo[3][1].push_back(port(std::string("eth-0-3"), 1, std::string("up"), 3));
+    topo[3][1].push_back(port(std::string("eth-0-4"), 1, std::string("up"), 4));
+    cout << __LINE__ << endl;
 }
-void get_route(std::string ss, std::string dd)
+void get_port_idx_from_ip(std::string ip)
 {
-    // std::cout << __LINE__ << std::endl;
-    std::cout << ss << " " << dd << std::endl;
+    // int ip_idx =
+}
+void init_cur_net(void);
+map<string, map<string, uint64_t>> send_rec;
+map<std::string, map<std::string, bool>> route_update;   // 上一次路由更新时间
+map<std::string, map<std::string, double>> cur_speed;    // 发送速度
+map<std::string, map<std::string, long long>> last_flow; // 上一条流的到达时间
+
+void get_route(std::string ss, std::string dd) // 计算源目节点之间的最宽路径
+{
     int s = ip_sw[ss], d = ip_sw[dd];
-    std::cout << s << " " << d << endl;
     int visit[n_sw];
     int pre[n_sw][2];
-    cout << __LINE__ << endl;
     for (int i = 0; i < n_sw; i++)
     {
         visit[i] = 0;
         pre[i][0] = 0;
     }
-    cout << __LINE__ << endl;
     visit[s] = 1;
     pre[s][0] = -1;
-    cout << __LINE__ << endl;
     while (true)
     {
         long long _s = 0, _d = 0, _i = 0, _u = 400000000000;
@@ -90,24 +139,21 @@ void get_route(std::string ss, std::string dd)
                     {
                         for (int k = 0; k < topo[i][j].size(); k++)
                         {
-                            if (topo[i][j][k] < _u)
+                            if (topo[i][j][k].rate < _u)
                             {
                                 _s = i;
                                 _d = j;
                                 _i = k;
-                                _u = topo[i][j][k];
+                                _u = topo[i][j][k].rate;
                             }
                         }
                     }
                 }
             }
         }
-        cout << __LINE__ << endl;
         visit[_d] = 1;
         pre[_d][0] = _s;
         pre[_d][1] = _i;
-        printf("%lld %lld %lld \n", _s, _d, _i);
-        cout << __LINE__ << endl;
         if (_d == d)
         {
             int sw = pre[_d][0];
@@ -122,86 +168,86 @@ void get_route(std::string ss, std::string dd)
         }
     }
 }
-int write_send_record()
+
+bool get_route_update(std::string sip, std::string dip) // 查看源目节点之间是否可以更新路由
 {
-
-    std::ofstream outputFile("output.txt");
-    // std::cout << __LINE__ << std::endl;
-    if (outputFile.is_open())
+    if (route_update.find(sip) != route_update.end())
     {
-        for (const auto &outerPair : send_rec)
+        if (route_update[sip].find(dip) != route_update[sip].end())
         {
-            // std::cout << __LINE__ << std::endl;
-            outputFile << outerPair.first << ":" << endl;
-            for (const auto &innerPair : outerPair.second)
-            {
-                // std::cout << __LINE__ << std::endl;
-                get_route(outerPair.first, innerPair.first);
-                outputFile << "\t" << innerPair.first << ": " << innerPair.second << endl;
-            }
-
-            outputFile << endl;
+            return route_update[sip][dip];
         }
-        outputFile.close();
+        else
+        {
+            route_update[sip][dip] = false;
+        }
     }
     else
     {
-        cerr << "unable to open file for writing." << endl;
-        return -1;
+        route_update[sip] = std::map<std::string, bool>();
+        route_update[sip][dip] = false;
     }
-    return 0;
+    return route_update[sip][dip];
 }
 
-// set value of send_rec to zero
-void set_rec_zero()
+void add_send_rec(Amount *amount, string &ip, int len) // 处理client发送的数据
 {
-    for (auto &outer : send_rec)
-        for (auto &inner : outer.second)
-            inner.second = 0;
-}
-
-void add_send_rec(Amount *amount, string &ip, int len)
-{
-
     for (int j = 0; j < len; j++)
     {
-        // cout << __LINE__ << " " << j << endl;
         if (strcmp(amount[j].gid, "\0") == 0)
             break;
         string dip(amount[j].gid);
         if (amount[j].tx > 4096)
         {
-            // get_route(ip, dip);
+            double speed = amount[j].tx * 8 * 1000000000 / (amount[j].tm - last_flow[ip][dip]);
+            cur_speed[ip][dip] = speed;
+            last_flow[ip][dip] = amount[j].tm;
+            if (speed > 1000000000 && !get_route_update(ip, dip))
+            {
+                route_update[ip][dip] = true;
+                get_route(ip, dip);
+            }
+            else if (speed < 1000000000 && get_route_update(ip, dip))
+            {
+                route_update[dip][ip] = false;
+            }
         }
         if (amount[j].rx > 4096)
         {
-            // get_route(dip, ip);
+            long long speed = amount[j].rx * 8 * 1000000000 / (amount[j].tm - last_flow[ip][dip]);
+            cur_speed[dip][ip] = speed;
+            last_flow[dip][ip] = amount[j].tm;
+            if (speed > 1000000000 && !get_route_update(dip, ip))
+            {
+                route_update[dip][ip] = true;
+                get_route(dip, ip);
+            }
+            else if (speed < 1000000000 && get_route_update(dip, ip))
+            {
+                route_update[dip][ip] = false;
+            }
         }
-        // if (amount[j].tx + amount[j].rx > 4096)
         cout << ip << " " << dip << " " << amount[j].tx << " " << amount[j].rx << " " << amount[j].tm << " " << amount[j].wr_id << endl;
     }
 }
 
-int main()
+map<int, string> fd_to_ip;
+vector<int> fds;
+int sock_fd;
+
+void connect_client()
 {
-    // std::cout << "start" << endl;
-    // std::cout << __LINE__ << std::endl;
-    init_topo();
-    int ret, sock_fd;
+    std::cout << __LINE__ << std::endl;
+    int ret;
     socklen_t addr_len = sizeof(struct sockaddr_in);
     struct sockaddr_in server_addr;
     bzero(&server_addr, sizeof(server_addr));
-    // std::cout << __LINE__ << std::endl;
-    //  read client list
-    ret = read_client_list();
-    ret = read_server_list();
     if (ret < 0)
     {
         cerr << "cannot open client.txt or server.txt" << endl;
         exit(1);
     }
-    int client_num = send_rec.size();
-    struct sockaddr_in client_addr[client_num];
+    struct sockaddr_in client_addr;
     //  socket create and verification
     sock_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (sock_fd == -1)
@@ -209,66 +255,43 @@ int main()
         cerr << "socket creation failed..." << endl;
         exit(1);
     }
-    std::cout << __LINE__ << std::endl;
     // assign IP, PORT
+    std::cout << __LINE__ << std::endl;
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     server_addr.sin_port = htons(PORT);
-
-    // bind and listen
     if ((bind(sock_fd, (struct sockaddr *)&server_addr, addr_len)) != 0)
     {
         cerr << "socket bind failed..." << endl;
         exit(1);
     }
-    listen(sock_fd, client_num);
+    listen(sock_fd, 1024);
     //  build the connection with clients
-    map<int, string> fd_to_ip;
-    vector<int> fds;
-    for (int i = 0; i < client_num; i++)
+    while (true)
     {
-        int connect_fd = accept(sock_fd, (struct sockaddr *)&client_addr[i], &addr_len);
+        int connect_fd = accept(sock_fd, (struct sockaddr *)&client_addr, &addr_len);
         if (connect_fd < 0)
         {
             cerr << "server accept failed..." << endl;
             exit(1);
         }
         int flags;
-
         if ((flags = fcntl(connect_fd, F_GETFL, 0)) == -1)
             flags = 0;
         fcntl(connect_fd, F_SETFL, flags | O_NONBLOCK);
         fds.push_back(connect_fd);
-        fd_to_ip[connect_fd] = inet_ntoa(client_addr[i].sin_addr);
+        fd_to_ip[connect_fd] = inet_ntoa(client_addr.sin_addr);
+        cout << "connect:" << fd_to_ip[connect_fd] << endl;
     }
+}
 
-    //  receive traffic prediction
-    alloc_shared_memory();
+int main()
+{
+    init_topo();
+    std::thread(connect_client).detach();
     do
     {
-        sleep_u(1000);
-        pthread_mutex_lock(&(shm->lock));
-        int size = 0;
-        if ((shm->t) < (shm->h))
-        {
-            size += ((shm->h) - (shm->t));
-            add_send_rec(shm->amount + (shm->t), server_ip, shm->h - shm->t);
-            shm->t = shm->h;
-        }
-        else if (shm->t > shm->h)
-        {
-            size += flow_NUM - shm->t;
-            add_send_rec(shm->amount + (shm->t), server_ip, flow_NUM - (shm->t));
-            shm->t = 0;
-            if (shm->t < shm->h)
-            {
-                size += (shm->h - shm->t);
-                add_send_rec(shm->amount + (shm->t), server_ip, shm->h - shm->t);
-                shm->t = shm->h;
-            }
-        }
-        pthread_mutex_unlock(&(shm->lock));
-        for (int i = 0; i < client_num; i++)
+        for (int i = 0; i < fds.size(); i++)
         {
             Amount *cli_amount = (Amount *)calloc(sizeof(Amount), flow_NUM);
             string ip = fd_to_ip[fds[i]];
@@ -278,12 +301,9 @@ int main()
                 cerr
                     << "socket read failed..." << endl;
             add_send_rec(cli_amount, ip, read_tal / sizeof(Amount));
-            size += read_tal / sizeof(Amount);
             free(cli_amount);
         }
     } while (true);
-    release_shared_memory();
-
     // close socket
     close(sock_fd);
     for (const auto &fd : fds)
