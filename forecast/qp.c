@@ -39,6 +39,7 @@
 #include <stdio.h>
 #include <util/mmio.h>
 #include <util/compiler.h>
+
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <sys/ipc.h>
@@ -47,6 +48,7 @@
 #include <semaphore.h>
 #include <fcntl.h>
 #include <time.h>
+#include <stdio.h>
 
 #include "mlx5.h"
 #include "mlx5_ifc.h"
@@ -851,7 +853,7 @@ static inline void post_send_db(struct mlx5_qp *qp, struct mlx5_bf *bf,
 
 // get traffic statistics
 #define KEY_DATA 16789824
-#define FLOW_NUM 1000
+#define FLOW_NUM 10000
 #define CACHE_NUM 521
 
 typedef struct
@@ -878,11 +880,11 @@ typedef struct
 	Amount amount[FLOW_NUM];
 	Cache cache[CACHE_NUM];
 } SHM;
-#include <time.h>
-static inline int _mlx5_post_send(struct ibv_qp *ibqp, struct ibv_send_wr *wr,
-								  struct ibv_send_wr **bad_wr)
+
+static void flow_forecast(struct ibv_qp *qp, struct ibv_send_wr *wr)
 {
 	/* forecast begin */
+	// printf("flow_forecast\n");
 	uint8_t path_mtu;
 	char gid[16] = {'\0'};
 
@@ -891,7 +893,7 @@ static inline int _mlx5_post_send(struct ibv_qp *ibqp, struct ibv_send_wr *wr,
 	SHM *shm = (SHM *)shmat(shmid, NULL,
 							0); // associate shared momory with this process
 
-	uint32_t qp_num = ibqp->qp_num;
+	uint32_t qp_num = qp->qp_num;
 	uint32_t cache_key = qp_num % CACHE_NUM;
 	if (shm->cache[cache_key].qp_num == qp_num)
 	{
@@ -902,7 +904,7 @@ static inline int _mlx5_post_send(struct ibv_qp *ibqp, struct ibv_send_wr *wr,
 	{
 		struct ibv_qp_attr qp_attr;
 		struct ibv_qp_init_attr init_attr;
-		ibv_query_qp(ibqp, &qp_attr, IBV_QP_AV | IBV_QP_PATH_MTU,
+		ibv_query_qp(qp, &qp_attr, IBV_QP_AV | IBV_QP_PATH_MTU,
 					 &init_attr);
 
 		char dgid[30] = {'\0'};
@@ -936,7 +938,7 @@ static inline int _mlx5_post_send(struct ibv_qp *ibqp, struct ibv_send_wr *wr,
 	default:
 		break;
 	}
-	enum ibv_qp_type qp_type = ibqp->qp_type;
+	enum ibv_qp_type qp_type = qp->qp_type;
 	uint16_t packet_header = 62;
 
 	uint64_t send_amount = 0, recv_amount = 0;
@@ -1001,7 +1003,7 @@ static inline int _mlx5_post_send(struct ibv_qp *ibqp, struct ibv_send_wr *wr,
 	}
 	if (recv_amount + send_amount > 4096)
 	{
-		pthread_mutex_lock(&shm->lock);
+		// pthread_mutex_lock(&shm->lock);
 		strncpy(shm->amount[shm->h].gid, gid, 16);
 		shm->amount[shm->h].rx = recv_amount;
 		shm->amount[shm->h].tx = send_amount;
@@ -1014,12 +1016,17 @@ static inline int _mlx5_post_send(struct ibv_qp *ibqp, struct ibv_send_wr *wr,
 		shm->amount[shm->h].tm = sec * 1000000000 + nsec;
 		shm->h++;
 		shm->h %= FLOW_NUM;
-		pthread_mutex_unlock(&shm->lock);
+		// pthread_mutex_unlock(&shm->lock);
 	}
 
 	shmdt(shm); // disassociate shared momory from this process
-	/* forecast end */
+				/* forecast end */
+}
 
+static inline int _mlx5_post_send(struct ibv_qp *ibqp, struct ibv_send_wr *wr,
+								  struct ibv_send_wr **bad_wr)
+{
+	flow_forecast(ibqp, wr);
 	struct mlx5_qp *qp = to_mqp(ibqp);
 	void *seg;
 	struct mlx5_wqe_eth_seg *eseg;

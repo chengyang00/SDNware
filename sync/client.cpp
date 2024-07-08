@@ -41,7 +41,8 @@ int main(int argc, char **argv)
     while (ret)
     {
         sleep_u(1000);
-        //pthread_mutex_lock(&(shm->lock));
+        // pthread_mutex_lock(&(shm->lock));
+        cout<<shm->h<<" "<<shm->t<<endl;
         if (shm->t < shm->h)
         {
             ret = sock_write(sock_fd, shm->amount + (shm->t), ((shm->h) - (shm->t)) * sizeof(Amount));
@@ -57,7 +58,7 @@ int main(int argc, char **argv)
                 shm->t = shm->h;
             }
         }
-        //pthread_mutex_unlock(&(shm->lock));
+        // pthread_mutex_unlock(&(shm->lock));
     }
     release_shared_memory();
     close(sock_fd);

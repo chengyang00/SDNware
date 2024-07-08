@@ -133,6 +133,8 @@ int alloc_shared_memory()
     }
     shm = (SHM *)shmat(shmid, NULL, 0); // associate shared memory with this process
     bzero(shm, shm_size);
+    shm->h = 0;
+    shm->t = 0;
     pthread_mutexattr_t attr;
     pthread_mutexattr_init(&attr);
     pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
