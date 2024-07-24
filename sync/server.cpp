@@ -11,7 +11,7 @@ using namespace concurrency::streams; // Asynchronous streams
 #define jstring(s) web::json::value::string(s)
 using jsvalue = web::json::value;
 
-std::string server_ip = "172.16.50.235";
+std::string sdn_server_ip = "172.16.50.235";
 
 class Link
 {
@@ -33,14 +33,14 @@ struct Switch
 map<std::string, map<std::string, bool>> route_update;          // 上一次路由更新时间
 map<std::string, map<std::string, long long>> time_last_flow;   // 上一条流的到达时间
 map<std::string, map<std::string, long long>> time_rate_update; // 上一条流的到达时间
-map<std::string, map<std::string, double>> txRates;          // 源目节点之间的传输速率
+map<std::string, map<std::string, double>> txRates;             // 源目节点之间的传输速率
 int n_switch;                                                   // 交换机的数量
 web::json::value topo, nodes, linklist;
 map<std::string, map<std::string, std::vector<Link>>> links; // 交换机之间的连接
 
 void get_topo()
 {
-    std::string url = std::string("http://") + server_ip + std::string("/fabric/topo?fabricName=test");
+    std::string url = std::string("http://") + sdn_server_ip + std::string("/fabric/topo?fabricName=test");
     http_client client(url);
     http_request request(methods::GET);
     request.headers().add(U("token"), U("AD6639F9A63D7D29883F8154184E4DE9"));
@@ -52,7 +52,8 @@ void get_topo()
         // std::cout << responseBody["data"][U("deviceList")] << std::endl;
         topo = responseBody["data"];
         nodes = topo["deviceList"];
-        linklist = topo["data"]["linkList"];
+        linklist = topo["linkList"];
+        n_switch = nodes.as_array().size();
     }
     else
     {
@@ -94,13 +95,20 @@ void get_links()
 struct server
 {
     std::string ip;
-    int port;
+    std::string port;
     long long bw;
     server(std::string _ip,
-           int _port,
+           std::string _port,
            long long _bw) : ip(_ip), port(_port), bw(_bw) {}
 };
 
+struct route
+{
+    int seq;
+    std::string indev, inport, outdev, outport;
+    std::vector<pair<std::string, std::string>> pass;
+};
+std::map<std::string, map<string, route>> routes;
 // 从交换机名称转换到交换机索引
 int switch_name_to_idx(std::string name)
 {
@@ -155,7 +163,7 @@ std::map<std::string, std::string> server_ip_to_switch_name;   // 从服务器ip
 void get_server_list()
 {
     FILE *file_server_list = fopen("server_list.txt", "r");
-    char *switch_name;
+    char *switch_name = (char *)malloc(32 * sizeof(char));
     while (fscanf(file_server_list, "s", switch_name) == 1)
     {
         switch_server_list[switch_name] = std::vector<server>();
@@ -163,20 +171,23 @@ void get_server_list()
         fscanf(file_server_list, "%d", &n_server);
         for (int i = 0; i < n_server; i++)
         {
-            char *ip;
-            int idx_port;
+            char *ip = (char *)malloc(32 * sizeof(char));
+            char *idx_port = (char *)malloc(32 * sizeof(char));
             long long bw;
-            fscanf(file_server_list, "%s%d%lld", ip, &idx_port, &bw);
+            fscanf(file_server_list, "%s%s%lld", ip, idx_port, &bw);
             switch_server_list[switch_name].emplace_back(ip, idx_port, bw);
             server_ip_to_switch_name[ip] = switch_name;
+            free(ip);
+            free(idx_port);
         }
     }
+    free(switch_name);
 }
 web::json::value interfaces;
 // 读取端口信息
 void get_interfaces()
 {
-    std::string url = std::string("http://") + server_ip + std::string("/netop/datatable/getRealtimeDataGroupIndexes");
+    std::string url = std::string("http://") + sdn_server_ip + std::string("/netop/datatable/getRealtimeDataGroupIndexes");
 
     http_client client(url);
     web::json::value data;
@@ -251,11 +262,11 @@ double get_txRate(std::string sip, std::string dip)
     return ((1000000000 - (sec * 1000000000 + nsec - time_rate_update[sip][dip])) / 1000000000) * txRates[sip][dip];
 }
 
-long long get_interface_rate(int idx1, int idx2, int idx, std::string sip, std::string dip)
+double get_interface_rate(int idx1, int idx2, int idx, std::string sip, std::string dip)
 {
     std::string dev1 = switch_idx_to_name(idx1).as_string();
     std::string dev2 = switch_idx_to_name(idx2).as_string();
-    long long res = 0;
+    double res = 0;
     for (auto flow : links[dev1][dev2][idx].flows)
     {
         if (sip == flow.first && dip == flow.second)
@@ -267,11 +278,23 @@ long long get_interface_rate(int idx1, int idx2, int idx, std::string sip, std::
     return res;
 }
 
-// 计算源目节点之间的最宽路径
-void get_route(std::string ss, std::string dd)
+void del_route_in_links(std::string sip, std::string dip)
 {
-    int s = switch_name_to_idx(server_ip_to_switch_name[ss]),
-        d = switch_name_to_idx(server_ip_to_switch_name[dd]);
+}
+void save_route_in_links(std::string sip, std::string dip)
+{
+}
+void del_route(int seq)
+{
+}
+void save_route(std::string sip, std::string dip)
+{
+}
+// 计算源目节点之间的最宽路径
+void get_route(std::string sip, std::string dip)
+{
+    int s = switch_name_to_idx(server_ip_to_switch_name[sip]),
+        d = switch_name_to_idx(server_ip_to_switch_name[dip]);
     if (s == d)
     {
         return;
@@ -284,7 +307,7 @@ void get_route(std::string ss, std::string dd)
         pre[i][0] = 0;
     }
     visit[s] = 1;
-    pre[s][0] = -1;
+    pre[s][0] = s;
     while (true)
     {
         long long _s = 0, _d = 0, _i = 0, _u = 400000000000;
@@ -296,9 +319,9 @@ void get_route(std::string ss, std::string dd)
                 {
                     if (visit[j] == 0)
                     {
-                        for (int k = 0; k < topo[i][j].size(); k++)
+                        for (int k = 0; k < links[switch_idx_to_name(i).as_string()][switch_idx_to_name(j).as_string()].size(); k++)
                         {
-                            long long rate = get_interface_rate(i, j, k, ss, dd);
+                            long long rate = get_interface_rate(i, j, k, sip, dip);
                             if (rate < _u)
                             {
                                 _s = i;
@@ -314,13 +337,18 @@ void get_route(std::string ss, std::string dd)
         visit[_d] = 1;
         pre[_d][0] = _s;
         pre[_d][1] = _i;
+        bool is_update;
         if (_d == d)
         {
+            std::vector<pair<string, string>> tmp_route;
             int sw = pre[_d][0];
             int idx = pre[_d][1];
-            while (sw != -1)
+            while (sw != s)
             {
-                printf("sip : %s -> dip : %s sw : %d , port : %d \n", ss.c_str(), dd.c_str(), sw, idx);
+                string insw=switch_idx_to_name(sw).as_string(),
+                outsw=
+                tmp_route.emplace_back(insw,links[switch_idx_to_name(pre[sw][1]).as_string()][]);
+                printf("sip : %s -> dip : %s sw : %d , port : %d \n", sip.c_str(), dip.c_str(), sw, idx);
                 idx = pre[sw][1];
                 sw = pre[sw][0];
             }

@@ -11,7 +11,7 @@ int main(int argc, char **argv)
     }
     else
     {
-        server_ip = "172.16.5.1";
+        server_ip = "172.16.2.1";
     }
 
     // socket create and verification
@@ -40,9 +40,9 @@ int main(int argc, char **argv)
     int ret = 1;
     while (ret)
     {
-        sleep_u(1000);
+        // sleep_u(1000);
         // pthread_mutex_lock(&(shm->lock));
-        cout<<shm->h<<" "<<shm->t<<endl;
+        //  cout<<shm->h<<" "<<shm->t<<endl;
         if (shm->t < shm->h)
         {
             ret = sock_write(sock_fd, shm->amount + (shm->t), ((shm->h) - (shm->t)) * sizeof(Amount));
