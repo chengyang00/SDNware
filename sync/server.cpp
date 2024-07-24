@@ -12,7 +12,7 @@ using namespace concurrency::streams; // Asynchronous streams
 using jsvalue = web::json::value;
 
 std::string sdn_server_ip = "172.16.50.235";
-
+int seq = 1;
 class Link
 {
 public:
@@ -105,6 +105,7 @@ struct server
 struct route
 {
     int seq;
+    bool del;
     std::string indev, inport, outdev, outport;
     std::vector<pair<std::string, std::string>> pass;
 };
@@ -277,7 +278,19 @@ double get_interface_rate(int idx1, int idx2, int idx, std::string sip, std::str
     }
     return res;
 }
-
+string server_ip_to_if(string ip)
+{
+    for (auto &sw : switch_server_list)
+    {
+        for (auto _server : sw.second)
+        {
+            if (ip == _server.ip)
+            {
+                return _server.port;
+            }
+        }
+    }
+}
 void del_route_in_links(std::string sip, std::string dip)
 {
 }
@@ -345,38 +358,48 @@ void get_route(std::string sip, std::string dip)
             int idx = pre[_d][1];
             while (sw != s)
             {
-                string insw=switch_idx_to_name(sw).as_string(),
-                outsw=
-                tmp_route.emplace_back(insw,links[switch_idx_to_name(pre[sw][1]).as_string()][]);
+                string outsw = switch_idx_to_name(sw).as_string(),
+                       insw = switch_idx_to_name(pre[sw][0]).as_string();
+                tmp_route.emplace_back(outsw, links[insw][outsw][idx].port2);
                 printf("sip : %s -> dip : %s sw : %d , port : %d \n", sip.c_str(), dip.c_str(), sw, idx);
                 idx = pre[sw][1];
                 sw = pre[sw][0];
+            }
+            tmp_route.reserve(tmp_route.size());
+            if (routes[sip][dip].seq == -1)
+            {
+                is_update = true;
+                routes[sip][dip].seq = seq;
+                routes[sip][dip].del = false;
+                seq++;
+                routes[sip][dip].indev = switch_idx_to_name(s).as_string();
+                routes[sip][dip].inport = server_ip_to_if(sip);
+                for (int k = 0; k < tmp_route.size() - 1; k++)
+                {
+                    routes[sip][dip].pass.push_back(tmp_route[k]);
+                }
+            }
+            else if (tmp_route.size() != routes[sip][dip].pass.size() + 1)
+            {
+                is_update = true;
+                if (!routes[sip][dip].del)
+                {
+                    del_route(routes[sip][dip].seq);
+                    del_route_in_links(sip, dip);
+                }
+                routes[sip][dip].pass.clear();
+                for (int k = 0; k < tmp_route.size() - 1; k++)
+                {
+                    routes[sip][dip].pass.push_back(tmp_route[k]);
+                }
+            }else{
+                
             }
             break;
         }
     }
 }
 
-bool get_route_update(std::string sip, std::string dip) // 查看源目节点之间是否可以更新路由
-{
-    if (route_update.find(sip) != route_update.end())
-    {
-        if (route_update[sip].find(dip) != route_update[sip].end())
-        {
-            return route_update[sip][dip];
-        }
-        else
-        {
-            route_update[sip][dip] = false;
-        }
-    }
-    else
-    {
-        route_update[sip] = std::map<std::string, bool>();
-        route_update[sip][dip] = false;
-    }
-    return route_update[sip][dip];
-}
 void add_send_rec(Amount *amount, string &ip, int len) // 处理client发送的数据
 {
     for (int j = 0; j < len; j++)
@@ -386,38 +409,18 @@ void add_send_rec(Amount *amount, string &ip, int len) // 处理client发送的�
         string dip(amount[j].gid);
         if (amount[j].tx > 4096)
         {
-
             double speed = amount[j].tx * 8 * 1000000000 / (amount[j].tm - time_last_flow[ip][dip]);
             struct timespec timestamp;
             clock_gettime(0, &timestamp);
             long long sec = timestamp.tv_sec;
             long long nsec = timestamp.tv_nsec;
-            txRates[sip][dip] = (1000000000 -)
-                time_last_flow[ip][dip] = amount[j].tm;
-            if (speed > 1000000000 && !get_route_update(ip, dip))
-            {
-                route_update[ip][dip] = true;
-                get_route(ip, dip);
-            }
-            else if (speed < 1000000000 && get_route_update(ip, dip))
-            {
-                route_update[ip][dip] = false;
-            }
+            txRates[ip][dip] = (1000000000 - 1);
+            time_last_flow[ip][dip] = amount[j].tm;
         }
         if (amount[j].rx > 4096)
         {
-
             long long speed = amount[j].rx * 8 * 1000000000 / (amount[j].tm - time_last_flow[dip][ip]);
             time_last_flow[dip][ip] = amount[j].tm;
-            if (speed > 1000000000 && !get_route_update(dip, ip))
-            {
-                route_update[dip][ip] = true;
-                get_route(dip, ip);
-            }
-            else if (speed < 1000000000 && get_route_update(dip, ip))
-            {
-                route_update[dip][ip] = false;
-            }
         }
     }
 }
