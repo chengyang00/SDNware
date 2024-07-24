@@ -193,8 +193,7 @@ void get_interfaces()
     http_client client(url);
     web::json::value data;
 
-    data[U("tableType")] = web::json::value::string(U("table"));
-    data["dataGroupName"] = web::json::value::string("interfaces");
+    data["seq"] = web::json::value::string(U("table"));
     std::vector<web::json::value> ips;
     for (auto node : nodes.as_array())
     {
@@ -383,9 +382,72 @@ void save_route_in_links(std::string sip, std::string dip)
 }
 void del_route(int seq)
 {
+    std::string url = std::string("http://") + sdn_server_ip + std::string("/fabric/flowpath/delete");
+
+    http_client client(url);
+    web::json::value data;
+    data["seq"] = web::json::value::number(seq);
+    web::http::http_request request(web::http::methods::DEL);
+    request.headers().set_content_type(U("application/json"));
+    request.headers().add(U("token"), U("AD6639F9A63D7D29883F8154184E4DE9"));
+    request.set_body(data);
+    pplx::task<web::http::http_response> response = client.request(request);
+    response.wait();
+    if (response.get().status_code() == web::http::status_codes::OK)
+    {
+        web::json::value responseBody = response.get().extract_json().get();
+    }
+    else
+    {
+        std::cout << "request fail" << std::endl;
+    }
 }
 void save_route(std::string sip, std::string dip)
 {
+    std::string url = std::string("http://") + sdn_server_ip + std::string("/fabric/flowpath/save");
+
+    http_client client(url);
+    web::json::value data;
+
+    data["seq"] = jsvalue::number(routes[sip][dip].seq);
+    data["fabricName"] = jstring("test");
+    data["description"] = jstring("");
+    data["inDevice"] = jsvalue();
+    data["inDevice"]["deviceAlias"] = jstring(routes[sip][dip].indev);
+    data["inDevice"]["portName"] = jstring(routes[sip][dip].inport);
+    std::vector<jsvalue> pass;
+    for (auto &_pass : routes[sip][dip].pass)
+    {
+        jsvalue __pass;
+        __pass["deviceAlias"] = jstring(_pass.first);
+        __pass["portName"] = jstring(_pass.second);
+        pass.push_back(__pass);
+    }
+    data["passDeviceList"] = jsvalue::array(pass);
+    data["outDevice"]["deviceAlias"] = jstring(routes[sip][dip].outdev);
+    data["outDevice"]["portName"] = jstring(routes[sip][dip].outport);
+    std::vector<jsvalue> flow;
+    jsvalue _flow;
+    _flow["seq"] = jsvalue::number(routes[sip][dip].seq);
+    _flow["action"] = jstring("permit");
+    _flow["srcIp"] = jstring(sip);
+    _flow["dstIp"] = jstring(dip);
+    flow.push_back(_flow);
+    data["fabricFlowPathRuleEntityList"] = jsvalue::array(flow);
+    web::http::http_request request(web::http::methods::POST);
+    request.headers().set_content_type(U("application/json"));
+    request.headers().add(U("token"), U("AD6639F9A63D7D29883F8154184E4DE9"));
+    request.set_body(data);
+    pplx::task<web::http::http_response> response = client.request(request);
+    response.wait();
+    if (response.get().status_code() == web::http::status_codes::OK)
+    {
+        web::json::value responseBody = response.get().extract_json().get();
+    }
+    else
+    {
+        std::cout << "request fail" << std::endl;
+    }
 }
 // 计算源目节点之间的最宽路径
 bool get_route(std::string sip, std::string dip)
@@ -552,6 +614,43 @@ map<int, string> fd_to_ip;
 vector<int> fds;
 int sock_fd;
 
+void data_init()
+{
+    get_topo();
+    get_links();
+    get_server_list();
+    get_interfaces();
+}
+void show_txRate()
+{
+    for (auto &src : txRates)
+    {
+        for (auto &dst : src.second)
+        {
+            if (dst.second > 0)
+            {
+                cout << src.first << "->" << dst.first << ":" << dst.second << endl;
+            }
+        }
+    }
+}
+void update_route()
+{
+    for (auto &src : txRates)
+    {
+        for (auto &dst : src.second)
+        {
+            if (dst.second > 0)
+            {
+                if (get_route(src.first, dst.first))
+                {
+                    cout << "update:" << src.first << "->" << dst.first << ":" << dst.second << endl;
+                    save_route(src.first, dst.first);
+                }
+            }
+        }
+    }
+}
 void connect_client()
 {
     int ret;
@@ -602,9 +701,23 @@ void connect_client()
 
 int main()
 {
+    data_init();
     std::thread(connect_client).detach();
+    struct timespec timestamp;
+    clock_gettime(0, &timestamp);
+    long long sec = timestamp.tv_sec;
+    long long nsec = timestamp.tv_nsec;
+    long long start = sec * 1000000000 + nsec;
     do
     {
+        clock_gettime(0, &timestamp);
+        long long now = timestamp.tv_sec * 1000000000 + timestamp.tv_nsec;
+        if (start + 1000000000 < now)
+        {
+            start = now;
+            show_txRate();
+            update_route();
+        }
         for (int i = 0; i < fds.size(); i++)
         {
             Amount *cli_amount = (Amount *)calloc(sizeof(Amount), flow_NUM);
