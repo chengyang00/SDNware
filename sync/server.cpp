@@ -293,9 +293,93 @@ string server_ip_to_if(string ip)
 }
 void del_route_in_links(std::string sip, std::string dip)
 {
+    if (routes[sip][dip].pass.size() > 0)
+    {
+        auto passroute = routes[sip][dip].pass;
+        for (auto &_link : links[server_ip_to_switch_name[sip]][passroute[0].first])
+        {
+            if (_link.port2 == passroute[0].second)
+            {
+                _link.flows.erase(find(_link.flows.begin(), _link.flows.end(), make_pair(sip, dip)));
+            }
+        }
+        if (passroute.size() > 1)
+        {
+            for (int i = 0; i < passroute.size() - 1; i++)
+            {
+                for (auto &_link : links[passroute[i].first][passroute[i + 1].first])
+                {
+                    if (_link.port2 == routes[sip][dip].pass[0].second)
+                    {
+                        _link.flows.erase(find(_link.flows.begin(), _link.flows.end(), make_pair(sip, dip)));
+                    }
+                }
+            }
+        }
+        for (auto &_link : links[passroute[passroute.size() - 1].first][routes[sip][sip].outdev])
+        {
+            if (_link.port2 == passroute[passroute.size() - 1].second)
+            {
+                _link.flows.erase(find(_link.flows.begin(), _link.flows.end(), make_pair(sip, dip)));
+            }
+        }
+    }
+    else
+    {
+        for (auto &_link : links[routes[sip][dip].indev][routes[sip][sip].outdev])
+        {
+            if (_link.port2 == routes[sip][dip].outport)
+            {
+                _link.flows.erase(find(_link.flows.begin(), _link.flows.end(), make_pair(sip, dip)));
+            }
+        }
+    }
+    routes[sip][dip].del = true;
 }
 void save_route_in_links(std::string sip, std::string dip)
 {
+    if (routes[sip][dip].pass.size() > 0)
+    {
+        auto passroute = routes[sip][dip].pass;
+        for (auto &_link : links[server_ip_to_switch_name[sip]][passroute[0].first])
+        {
+            if (_link.port2 == passroute[0].second)
+            {
+                _link.flows.emplace_back(sip, dip);
+            }
+        }
+        if (passroute.size() > 1)
+        {
+            for (int i = 0; i < passroute.size() - 1; i++)
+            {
+                for (auto &_link : links[passroute[i].first][passroute[i + 1].first])
+                {
+                    if (_link.port2 == routes[sip][dip].pass[0].second)
+                    {
+                        _link.flows.emplace_back(sip, dip);
+                    }
+                }
+            }
+        }
+        for (auto &_link : links[passroute[passroute.size() - 1].first][routes[sip][sip].outdev])
+        {
+            if (_link.port2 == passroute[passroute.size() - 1].second)
+            {
+                _link.flows.emplace_back(sip, dip);
+            }
+        }
+    }
+    else
+    {
+        for (auto &_link : links[routes[sip][dip].indev][routes[sip][sip].outdev])
+        {
+            if (_link.port2 == routes[sip][dip].outport)
+            {
+                _link.flows.emplace_back(sip, dip);
+            }
+        }
+    }
+    routes[sip][dip].del = true;
 }
 void del_route(int seq)
 {
@@ -304,7 +388,7 @@ void save_route(std::string sip, std::string dip)
 {
 }
 // 计算源目节点之间的最宽路径
-void get_route(std::string sip, std::string dip)
+bool get_route(std::string sip, std::string dip)
 {
     int s = switch_name_to_idx(server_ip_to_switch_name[sip]),
         d = switch_name_to_idx(server_ip_to_switch_name[dip]);
@@ -392,12 +476,51 @@ void get_route(std::string sip, std::string dip)
                 {
                     routes[sip][dip].pass.push_back(tmp_route[k]);
                 }
-            }else{
-                
             }
-            break;
+            else
+            {
+                for (int k = 0; k < tmp_route.size() - 1; k++)
+                {
+                    if (routes[sip][dip].pass[k].first != tmp_route[k].first)
+                    {
+                        is_update = true;
+                        if (!routes[sip][dip].del)
+                        {
+                            del_route(routes[sip][dip].seq);
+                            del_route_in_links(sip, dip);
+                        }
+                        routes[sip][dip].pass[k].first = tmp_route[k].first;
+                    }
+                    if (routes[sip][dip].pass[k].second != tmp_route[k].second)
+                    {
+                        is_update = true;
+                        if (!routes[sip][dip].del)
+                        {
+                            del_route(routes[sip][dip].seq);
+                            del_route_in_links(sip, dip);
+                        }
+                        routes[sip][dip].pass[k].second = tmp_route[k].second;
+                    }
+                }
+            }
+            if (routes[sip][dip].outport != tmp_route[tmp_route.size() - 1].second)
+            {
+                is_update = true;
+                if (!routes[sip][dip].del)
+                {
+                    del_route(routes[sip][dip].seq);
+                    del_route_in_links(sip, dip);
+                }
+                routes[sip][dip].outport = tmp_route[tmp_route.size() - 1].second;
+            }
+            if (is_update)
+            {
+                save_route_in_links(sip, dip);
+            }
+            return is_update;
         }
     }
+    return false;
 }
 
 void add_send_rec(Amount *amount, string &ip, int len) // 处理client发送的数据
