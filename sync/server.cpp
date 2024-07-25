@@ -1,7 +1,7 @@
 #include "common.hpp"
 #include <cpprest/http_client.h>
 #include <cpprest/filestream.h>
-
+#include <algorithm>
 using namespace utility;              // Common utilities like string conversions
 using namespace web;                  // Common features like URIs.
 using namespace web::http;            // Common HTTP functionality
@@ -153,6 +153,7 @@ std::string switch_ip_to_name(std::string ip)
 
 jsvalue switch_idx_to_name(int idx)
 {
+    cout << idx << " " << __LINE__ << endl;
     return nodes.as_array()[idx]["deviceName"];
 }
 
@@ -324,7 +325,7 @@ void del_route_in_links(std::string sip, std::string dip)
                 }
             }
         }
-        for (auto &_link : links[passroute[passroute.size() - 1].first][routes[sip][sip].outdev])
+        for (auto &_link : links[passroute[passroute.size() - 1].first][routes[sip][dip].outdev])
         {
             if (_link.port2 == passroute[passroute.size() - 1].second)
             {
@@ -361,15 +362,26 @@ void show_links()
         }
     }
 }
-
+void show_route(std::string sip, std::string dip)
+{
+    cout << "indev:" << routes[sip][dip].indev << " inport" << routes[sip][dip].inport << endl;
+    for (auto &pass : routes[sip][dip].pass)
+    {
+        cout << " pass:" << pass.first << " " << pass.second << endl;
+    }
+    cout << "indev:" << routes[sip][dip].outdev << " inport" << routes[sip][dip].outport << endl;
+}
 void save_route_in_links(std::string sip, std::string dip)
 {
     cout << __LINE__ << endl;
+    show_route(sip, dip);
     if (routes[sip][dip].pass.size() > 0)
     {
         auto passroute = routes[sip][dip].pass;
+        // assert(passroute.size() > 0);
         for (auto &_link : links[server_ip_to_switch_name[sip]][passroute[0].first])
         {
+            cout << __LINE__ << " " << _link.port2 << endl;
             if (_link.port2 == passroute[0].second)
             {
                 _link.flows.emplace_back(sip, dip);
@@ -381,6 +393,7 @@ void save_route_in_links(std::string sip, std::string dip)
             {
                 for (auto &_link : links[passroute[i].first][passroute[i + 1].first])
                 {
+                    cout << __LINE__ << " " << _link.port2 << endl;
                     if (_link.port2 == routes[sip][dip].pass[0].second)
                     {
                         _link.flows.emplace_back(sip, dip);
@@ -388,9 +401,12 @@ void save_route_in_links(std::string sip, std::string dip)
                 }
             }
         }
-        for (auto &_link : links[passroute[passroute.size() - 1].first][routes[sip][sip].outdev])
+        cout << __LINE__ << endl;
+        cout << "passdev:" << passroute[passroute.size() - 1].first << " outdev:" << routes[sip][dip].outdev << endl;
+        for (auto &_link : links[passroute[passroute.size() - 1].first][routes[sip][dip].outdev])
         {
-            if (_link.port2 == passroute[passroute.size() - 1].second)
+            cout << __LINE__ << " " << _link.port2 << endl;
+            if (_link.port2 == routes[sip][dip].outport)
             {
                 _link.flows.emplace_back(sip, dip);
             }
@@ -398,8 +414,9 @@ void save_route_in_links(std::string sip, std::string dip)
     }
     else
     {
-        for (auto &_link : links[routes[sip][dip].indev][routes[sip][sip].outdev])
+        for (auto &_link : links[routes[sip][dip].indev][routes[sip][dip].outdev])
         {
+            cout << __LINE__ << " " << _link.port2 << endl;
             if (_link.port2 == routes[sip][dip].outport)
             {
                 _link.flows.emplace_back(sip, dip);
@@ -630,6 +647,8 @@ bool get_route(std::string sip, std::string dip)
                 }
             }
             routes[sip][dip].outdev = switch_idx_to_name(d).as_string();
+            cout << __LINE__ << endl;
+            cout << routes[sip][dip].outdev << " " << switch_idx_to_name(d).as_string() << endl;
             if (routes[sip][dip].outport == "")
             {
                 routes[sip][dip].outport = tmp_route[tmp_route.size() - 1].second;
