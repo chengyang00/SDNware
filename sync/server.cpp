@@ -344,6 +344,7 @@ void del_route_in_links(std::string sip, std::string dip)
     }
     routes[sip][dip].del = true;
 }
+
 void show_links()
 {
     for (auto &indev : links)
@@ -360,6 +361,7 @@ void show_links()
         }
     }
 }
+
 void save_route_in_links(std::string sip, std::string dip)
 {
     cout << __LINE__ << endl;
@@ -504,7 +506,7 @@ bool get_route(std::string sip, std::string dip)
     pre[s][0] = s;
     while (true)
     {
-        long long _s = 0, _d = 0, _i = 0, _u = 400000000000;
+        long long _s = 0, _d = 0, _i = 0, _u = 4000000000000;
         for (int i = 0; i < n_switch; i++)
         {
             if (visit[i] == 1)
@@ -515,10 +517,11 @@ bool get_route(std::string sip, std::string dip)
                     {
                         for (int k = 0; k < links[switch_idx_to_name(i).as_string()][switch_idx_to_name(j).as_string()].size(); k++)
                         {
-                            long long rate = get_interface_rate(i, j, k, sip, dip);
-                            cout << rate << " " << i << " " << j << " " << k << endl;
+                            double rate = get_interface_rate(i, j, k, sip, dip);
+                            cout << __LINE__ << " " << rate << " " << i << " " << j << " " << k << endl;
                             if (rate < _u)
                             {
+                                cout << __LINE__ << endl;
                                 _s = i;
                                 _d = j;
                                 _i = k;
@@ -529,12 +532,13 @@ bool get_route(std::string sip, std::string dip)
                 }
             }
         }
+        cout << __LINE__ << " " << _u << " " << _s << " " << _d << " " << _i << endl;
         visit[_d] = 1;
         pre[_d][0] = _s;
         pre[_d][1] = _i;
-        bool is_update = false;
         if (_d == d)
         {
+            bool is_update = false;
             cout << "get_route" << endl;
             cout << sip << "->" << dip << endl;
             cout << s << "->" << d << endl;
@@ -550,15 +554,15 @@ bool get_route(std::string sip, std::string dip)
             cout << endl;
             std::vector<pair<string, string>> tmp_route;
             int sw = d;
-            int idx = pre[_d][1];
+            int idx = pre[d][1];
             while (sw != s)
             {
                 string outsw = switch_idx_to_name(sw).as_string(),
                        insw = switch_idx_to_name(pre[sw][0]).as_string();
                 tmp_route.emplace_back(outsw, links[insw][outsw][idx].port2);
                 printf("sip : %s -> dip : %s sw : %d , port : %d \n", sip.c_str(), dip.c_str(), sw, idx);
-                idx = pre[sw][1];
                 sw = pre[sw][0];
+                idx = pre[sw][1];
             }
             cout << __LINE__ << endl;
 
