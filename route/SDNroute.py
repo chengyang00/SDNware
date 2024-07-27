@@ -3,7 +3,7 @@ from copy import deepcopy
 import random
 import requests
 import json
-import lp_mlu
+import routesolve
 
 
 token = "AD6639F9A63D7D29883F8154184E4DE9"
@@ -205,7 +205,7 @@ for i in range(1, 9):
 
 topo_to_file()
 
-route = lp_mlu.lp_mlu_route(n_node)
+route = routesolve.lp_mlu_route(n_node)
 route.get_routing()
 route.main()
 
@@ -324,10 +324,6 @@ class nonblocking:
     def get_s_to_d_routing(self):  # 计算源目节点之间的路由
         seq_p = 128
         seq_f = 128
-        route_sd = open("route_sd.txt", "w")
-        """for u in links:
-            for v in links[u]:
-                print(u,"->",v," ",links[u][v])"""
         paths = self.get_all_paths()
         # print(paths)
         for u in range(self.n_node):  # 从交换机u开始
