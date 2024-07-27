@@ -2,6 +2,7 @@
 #include <cpprest/http_client.h>
 #include <cpprest/filestream.h>
 #include <algorithm>
+
 using namespace utility;              // Common utilities like string conversions
 using namespace web;                  // Common features like URIs.
 using namespace web::http;            // Common HTTP functionality
@@ -153,7 +154,7 @@ std::string switch_ip_to_name(std::string ip)
 
 jsvalue switch_idx_to_name(int idx)
 {
-    cout << idx << " " << __LINE__ << endl;
+    // cout << idx << " " << __LINE__ << endl;
     return nodes.as_array()[idx]["deviceName"];
 }
 
@@ -227,15 +228,15 @@ void get_interfaces()
 // 端口索引转端口名
 std::string idx_to_ifname(std::string ip, std::string idx)
 {
-    cout << ip << " " << idx << endl;
+    // cout << ip << " " << idx << endl;
     for (auto interface : interfaces.as_array())
     {
-        cout << interface["value"] << endl;
+        // cout << interface["value"] << endl;
         if (jstring(ip) == interface["value"])
         {
             for (auto inf : interface["children"].as_array())
             {
-                cout << inf["value"] << endl;
+                // cout << inf["value"] << endl;
                 if (jstring(idx) == inf["value"])
                 {
                     return inf["label"].as_string();
@@ -269,7 +270,8 @@ double get_txRate(std::string sip, std::string dip)
     clock_gettime(0, &timestamp);
     double sec = timestamp.tv_sec;
     double nsec = timestamp.tv_nsec;
-    return ((1000000000 - (sec * 1000000000 + nsec - time_rate_update[sip][dip])) / 1000000000) * txRates[sip][dip];
+    long long dt = sec * 1000000000 + nsec - time_rate_update[sip][dip];
+    return ((win_s - dt) / win_s) * txRates[sip][dip];
 }
 
 double get_interface_rate(int idx1, int idx2, int idx, std::string sip, std::string dip)
@@ -356,7 +358,7 @@ void show_links()
             {
                 for (auto &_flow : _links.flows)
                 {
-                    cout << indev.first << " " << outdev.first << " " << _links.port1 << " " << _links.port2 << " " << _flow.first << " " << _flow.second << endl;
+                    std::cout << indev.first << " " << outdev.first << " " << _links.port1 << " " << _links.port2 << " " << _flow.first << " " << _flow.second << endl;
                 }
             }
         }
@@ -364,16 +366,16 @@ void show_links()
 }
 void show_route(std::string sip, std::string dip)
 {
-    cout << "indev:" << routes[sip][dip].indev << " inport" << routes[sip][dip].inport << endl;
+    std::cout << "indev:" << routes[sip][dip].indev << " inport" << routes[sip][dip].inport << endl;
     for (auto &pass : routes[sip][dip].pass)
     {
-        cout << " pass:" << pass.first << " " << pass.second << endl;
+        std::cout << " pass:" << pass.first << " " << pass.second << endl;
     }
-    cout << "indev:" << routes[sip][dip].outdev << " inport" << routes[sip][dip].outport << endl;
+    std::cout << "indev:" << routes[sip][dip].outdev << " inport" << routes[sip][dip].outport << endl;
 }
 void save_route_in_links(std::string sip, std::string dip)
 {
-    cout << __LINE__ << endl;
+    // std::cout << __LINE__ << endl;
     show_route(sip, dip);
     if (routes[sip][dip].pass.size() > 0)
     {
@@ -381,7 +383,7 @@ void save_route_in_links(std::string sip, std::string dip)
         // assert(passroute.size() > 0);
         for (auto &_link : links[server_ip_to_switch_name[sip]][passroute[0].first])
         {
-            cout << __LINE__ << " " << _link.port2 << endl;
+            // cout << __LINE__ << " " << _link.port2 << endl;
             if (_link.port2 == passroute[0].second)
             {
                 _link.flows.emplace_back(sip, dip);
@@ -393,7 +395,7 @@ void save_route_in_links(std::string sip, std::string dip)
             {
                 for (auto &_link : links[passroute[i].first][passroute[i + 1].first])
                 {
-                    cout << __LINE__ << " " << _link.port2 << endl;
+                    // cout << __LINE__ << " " << _link.port2 << endl;
                     if (_link.port2 == routes[sip][dip].pass[0].second)
                     {
                         _link.flows.emplace_back(sip, dip);
@@ -401,11 +403,11 @@ void save_route_in_links(std::string sip, std::string dip)
                 }
             }
         }
-        cout << __LINE__ << endl;
-        cout << "passdev:" << passroute[passroute.size() - 1].first << " outdev:" << routes[sip][dip].outdev << endl;
+        // cout << __LINE__ << endl;
+        // cout << "passdev:" << passroute[passroute.size() - 1].first << " outdev:" << routes[sip][dip].outdev << endl;
         for (auto &_link : links[passroute[passroute.size() - 1].first][routes[sip][dip].outdev])
         {
-            cout << __LINE__ << " " << _link.port2 << endl;
+            // cout << __LINE__ << " " << _link.port2 << endl;
             if (_link.port2 == routes[sip][dip].outport)
             {
                 _link.flows.emplace_back(sip, dip);
@@ -416,7 +418,7 @@ void save_route_in_links(std::string sip, std::string dip)
     {
         for (auto &_link : links[routes[sip][dip].indev][routes[sip][dip].outdev])
         {
-            cout << __LINE__ << " " << _link.port2 << endl;
+            // cout << __LINE__ << " " << _link.port2 << endl;
             if (_link.port2 == routes[sip][dip].outport)
             {
                 _link.flows.emplace_back(sip, dip);
@@ -428,7 +430,7 @@ void save_route_in_links(std::string sip, std::string dip)
 }
 void del_route(int seq)
 {
-    cout << __LINE__ << endl;
+    // cout << __LINE__ << endl;
     std::string url = std::string("http://") + sdn_server_ip + std::string("/fabric/flowpath/delete");
 
     http_client client(url);
@@ -443,17 +445,17 @@ void del_route(int seq)
     if (response.get().status_code() == web::http::status_codes::OK)
     {
         web::json::value responseBody = response.get().extract_json().get();
-        cout << responseBody << endl;
+        // cout << responseBody << endl;
     }
     else
     {
         std::cout << "request fail" << std::endl;
     }
-    cout << __LINE__ << endl;
+    // cout << __LINE__ << endl;
 }
 void save_route(std::string sip, std::string dip)
 {
-    cout << __LINE__ << routes[sip][dip].seq << endl;
+    // cout << __LINE__ << routes[sip][dip].seq << endl;
     std::string url = std::string("http://") + sdn_server_ip + std::string("/fabric/flowpath/save");
 
     http_client client(url);
@@ -493,18 +495,18 @@ void save_route(std::string sip, std::string dip)
     if (response.get().status_code() == web::http::status_codes::OK)
     {
         web::json::value responseBody = response.get().extract_json().get();
-        cout << responseBody << endl;
+        // cout << responseBody << endl;
     }
     else
     {
         std::cout << "request fail" << std::endl;
     }
-    cout << __LINE__ << endl;
+    // cout << __LINE__ << endl;
 }
 // 计算源目节点之间的最宽路径
 bool get_route(std::string sip, std::string dip)
 {
-    cout << __LINE__ << endl;
+    // cout << __LINE__ << endl;
     int s = switch_name_to_idx(server_ip_to_switch_name[sip]),
         d = switch_name_to_idx(server_ip_to_switch_name[dip]);
     if (s == d)
@@ -535,10 +537,10 @@ bool get_route(std::string sip, std::string dip)
                         for (int k = 0; k < links[switch_idx_to_name(i).as_string()][switch_idx_to_name(j).as_string()].size(); k++)
                         {
                             double rate = get_interface_rate(i, j, k, sip, dip);
-                            cout << __LINE__ << " " << rate << " " << i << " " << j << " " << k << endl;
+                            // cout << __LINE__ << " " << rate << " " << i << " " << j << " " << k << endl;
                             if (rate < _u)
                             {
-                                cout << __LINE__ << endl;
+                                // cout << __LINE__ << endl;
                                 _s = i;
                                 _d = j;
                                 _i = k;
@@ -549,26 +551,26 @@ bool get_route(std::string sip, std::string dip)
                 }
             }
         }
-        cout << __LINE__ << " " << _u << " " << _s << " " << _d << " " << _i << endl;
+        // cout << __LINE__ << " " << _u << " " << _s << " " << _d << " " << _i << endl;
         visit[_d] = 1;
         pre[_d][0] = _s;
         pre[_d][1] = _i;
         if (_d == d)
         {
             bool is_update = false;
-            cout << "get_route" << endl;
-            cout << sip << "->" << dip << endl;
-            cout << s << "->" << d << endl;
-            for (auto &v : visit)
-            {
-                cout << v << " ";
-            }
-            cout << endl;
-            for (auto &v : pre)
-            {
-                cout << v[0] << " " << v[1] << " ";
-            }
-            cout << endl;
+            // cout << "get_route" << endl;
+            // cout << sip << "->" << dip << endl;
+            // cout << s << "->" << d << endl;
+            /* for (auto &v : visit)
+             {
+                 cout << v << " ";
+             }
+             // cout << endl;
+             for (auto &v : pre)
+             {
+                 // cout << v[0] << " " << v[1] << " ";
+             }
+             // cout << endl;*/
             std::vector<pair<string, string>> tmp_route;
             int sw = d;
             int idx = pre[d][1];
@@ -577,24 +579,24 @@ bool get_route(std::string sip, std::string dip)
                 string outsw = switch_idx_to_name(sw).as_string(),
                        insw = switch_idx_to_name(pre[sw][0]).as_string();
                 tmp_route.emplace_back(outsw, links[insw][outsw][idx].port2);
-                printf("sip : %s -> dip : %s sw : %d , port : %d \n", sip.c_str(), dip.c_str(), sw, idx);
+                // printf("sip : %s -> dip : %s sw : %d , port : %d \n", sip.c_str(), dip.c_str(), sw, idx);
                 sw = pre[sw][0];
                 idx = pre[sw][1];
             }
-            cout << __LINE__ << endl;
+            // cout << __LINE__ << endl;
 
-            reverse(tmp_route.begin(), tmp_route.end());
+            std::reverse(tmp_route.begin(), tmp_route.end());
             if (routes[sip][dip].seq == -1)
             {
-                cout << __LINE__ << endl;
+                // cout << __LINE__ << endl;
                 is_update = true;
                 routes[sip][dip].seq = seq;
                 routes[sip][dip].del = false;
                 seq++;
                 routes[sip][dip].indev = switch_idx_to_name(s).as_string();
                 routes[sip][dip].inport = idx_to_ifname(switch_idx_to_ip(s).as_string(), server_ip_to_if(sip));
-                cout << "inport:" << routes[sip][dip].inport << " " << idx_to_ifname(switch_idx_to_ip(s).as_string(), server_ip_to_if(sip)) << endl;
-                cout << sip << " " << dip << " " << routes[sip][dip].indev << " " << endl;
+                // cout << "inport:" << routes[sip][dip].inport << " " << idx_to_ifname(switch_idx_to_ip(s).as_string(), server_ip_to_if(sip)) << endl;
+                // cout << sip << " " << dip << " " << routes[sip][dip].indev << " " << endl;
                 for (int k = 0; k < tmp_route.size() - 1; k++)
                 {
                     routes[sip][dip].pass.push_back(tmp_route[k]);
@@ -602,7 +604,7 @@ bool get_route(std::string sip, std::string dip)
             }
             else if (tmp_route.size() != routes[sip][dip].pass.size() + 1)
             {
-                cout << __LINE__ << endl;
+                // cout << __LINE__ << endl;
                 is_update = true;
                 if (!routes[sip][dip].del)
                 {
@@ -617,14 +619,14 @@ bool get_route(std::string sip, std::string dip)
             }
             else
             {
-                cout << __LINE__ << endl;
+                // cout << __LINE__ << endl;
 
                 for (int k = 0; k < tmp_route.size() - 1; k++)
                 {
-                    cout << __LINE__ << " " << k << endl;
+                    // cout << __LINE__ << " " << k << endl;
                     if (routes[sip][dip].pass[k].first != tmp_route[k].first)
                     {
-                        cout << __LINE__ << endl;
+                        // cout << __LINE__ << endl;
                         is_update = true;
                         if (!routes[sip][dip].del)
                         {
@@ -635,7 +637,7 @@ bool get_route(std::string sip, std::string dip)
                     }
                     if (routes[sip][dip].pass[k].second != tmp_route[k].second)
                     {
-                        cout << __LINE__ << endl;
+                        // cout << __LINE__ << endl;
                         is_update = true;
                         if (!routes[sip][dip].del)
                         {
@@ -647,16 +649,16 @@ bool get_route(std::string sip, std::string dip)
                 }
             }
             routes[sip][dip].outdev = switch_idx_to_name(d).as_string();
-            cout << __LINE__ << endl;
-            cout << routes[sip][dip].outdev << " " << switch_idx_to_name(d).as_string() << endl;
+            // cout << __LINE__ << endl;
+            // cout << routes[sip][dip].outdev << " " << switch_idx_to_name(d).as_string() << endl;
             if (routes[sip][dip].outport == "")
             {
                 routes[sip][dip].outport = tmp_route[tmp_route.size() - 1].second;
             }
             else if (routes[sip][dip].outport != tmp_route[tmp_route.size() - 1].second)
             {
-                cout << __LINE__ << endl;
-                cout << routes[sip][dip].outport << " " << tmp_route[tmp_route.size() - 1].second;
+                // cout << __LINE__ << endl;
+                // cout << routes[sip][dip].outport << " " << tmp_route[tmp_route.size() - 1].second;
                 is_update = true;
                 if (!routes[sip][dip].del)
                 {
@@ -665,13 +667,13 @@ bool get_route(std::string sip, std::string dip)
                 }
                 routes[sip][dip].outport = tmp_route[tmp_route.size() - 1].second;
             }
-            cout << __LINE__ << endl;
+            // cout << __LINE__ << endl;
             if (is_update)
             {
-                cout << __LINE__ << endl;
+                // cout << __LINE__ << endl;
                 save_route_in_links(sip, dip);
             }
-            cout << __LINE__ << endl;
+            // cout << __LINE__ << endl;
 
             return is_update;
         }
@@ -691,7 +693,7 @@ bool check_ip(std::string ip)
             }
         }
     }
-    cout << "收到非法ip:" << ip << endl;
+    std::cout << "收到非法ip:" << ip << endl;
     return false;
 }
 void add_send_rec(Amount *amount, string &sip, int len) // 处理client发送的数据
@@ -753,7 +755,7 @@ void add_send_rec(Amount *amount, string &sip, int len) // 处理client发送的
         }
         catch (std::exception &e)
         {
-            cout << __LINE__ << " " << e.what() << endl;
+            std::cout << __LINE__ << " " << e.what() << endl;
         }
     }
 }
@@ -780,7 +782,7 @@ void show_txRate()
             // cout << __LINE__ << endl;
             if (dst.second > 0)
             {
-                cout << src.first << "->" << dst.first << ":" << dst.second << endl;
+                std::cout << src.first << "->" << dst.first << ":" << dst.second << endl;
             }
         }
     }
@@ -799,7 +801,7 @@ void update_route()
                 // cout << __LINE__ << endl;
                 if (get_route(src.first, dst.first))
                 {
-                    cout << "update:" << src.first << "->" << dst.first << ":" << dst.second << endl;
+                    // std::cout << "update:" << src.first << "->" << dst.first << ":" << dst.second << endl;
                     save_route(src.first, dst.first);
                 }
             }
@@ -850,15 +852,15 @@ void connect_client()
         fcntl(connect_fd, F_SETFL, flags | O_NONBLOCK);
         fds.push_back(connect_fd);
         fd_to_ip[connect_fd] = inet_ntoa(client_addr.sin_addr);
-        cout << "connect:" << fd_to_ip[connect_fd] << endl;
+        std::cout << "connect:" << fd_to_ip[connect_fd] << endl;
     }
 }
 
 int main()
 {
-    cout << __LINE__ << endl;
+    // cout << __LINE__ << endl;
     data_init();
-    cout << __LINE__ << endl;
+    // cout << __LINE__ << endl;
     std::thread(connect_client).detach();
     struct timespec timestamp;
     clock_gettime(0, &timestamp);
@@ -876,7 +878,7 @@ int main()
             start = now;
             show_txRate();
             update_route();
-            cout << __LINE__ << endl;
+            // cout << __LINE__ << endl;
         }
         for (int i = 0; i < fds.size(); i++)
         {
