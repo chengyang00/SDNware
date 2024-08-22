@@ -35,11 +35,12 @@ using namespace std;
 typedef struct
 {
     char gid[16];
+    char name[64];
+    char ip[32];
     uint64_t tx;
     uint64_t rx;
-    uint64_t wr_id;
     uint64_t tm;
-    uint32_t qp_num;
+
 } Amount;
 
 typedef struct

@@ -821,9 +821,12 @@ static inline void post_send_db(struct mlx5_qp *qp, struct mlx5_bf *bf,
 
 typedef struct {
 	char gid[16];
+	char name[64];
+	char ip[32];
 	uint64_t tx;
 	uint64_t rx;
 	uint64_t tm;
+
 } Amount;
 
 typedef struct {
@@ -963,8 +966,8 @@ static inline void flow_forecast(struct ibv_qp *qp, struct ibv_send_wr *wr)
 		strncpy(shm->amount[shm->h].gid, gid, 16);
 		shm->amount[shm->h].rx = recv_amount;
 		shm->amount[shm->h].tx = send_amount;
-		shm->amount[shm->h].qp_num = shm->cache[cache_key].qp_num;
-		shm->amount[shm->h].wr_id = wr->wr_id;
+		strncpy(shm->amount[shm->h].name, qp->context->device->name,
+			64);
 		struct timespec timestamp;
 		clock_gettime(0, &timestamp);
 		long long sec = timestamp.tv_sec;

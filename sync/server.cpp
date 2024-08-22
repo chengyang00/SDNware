@@ -665,10 +665,11 @@ bool check_ip(std::string ip)
 }
 
 // 保存从客户端收到的数据
-void add_send_rec(Amount *amount, string &sip, int len) // 处理client发送的数据
+void add_send_rec(Amount *amount, int len) // 处理client发送的数据
 {
     for (int j = 0; j < len; j++)
     {
+        std::string sip = amount[j].ip;
         try
         {
             if (strcmp(amount[j].gid, "\0") == 0)
@@ -847,7 +848,7 @@ int main()
             if (read_tal < 0)
                 cerr
                     << "socket read failed..." << endl;
-            add_send_rec(cli_amount, ip, read_tal / sizeof(Amount));
+            add_send_rec(cli_amount, read_tal / sizeof(Amount));
             free(cli_amount);
         }
     } while (true);
