@@ -17,6 +17,16 @@ std::string sdn_server_ip = "172.16.50.235"; // 该程序的IP地址
 int seq = 1;                                 // 流策略初始序列号
 std::string token = "AD6639F9A63D7D29883F8154184E4DE9";
 
+struct route_list
+{
+    std::string sip, dip;
+    long long tm;
+    route_list *next;
+};
+
+route_list *route_head = nullptr, *route_end = nullptr;
+long long n_route = 0;
+long long route_max = 1000;
 // 两个交换机之间的连接
 struct Link
 {
@@ -47,8 +57,9 @@ struct server
 
 struct route
 {
-    int seq;                                          // 序列号
-    bool del;                                         // 在此之前是否被删除过
+    int seq; // 序列号
+    bool del;
+    long long tm;                                     // 在此之前是否被删除过
     std::string indev, inport, outdev, outport;       // 入设备，入端口，出设备，出端口
     std::vector<pair<std::string, std::string>> pass; // 途径设备
     route() : seq(-1), outport("") {}
@@ -507,6 +518,57 @@ void save_route(std::string sip, std::string dip)
     }
 }
 
+void add_route(std::string sip, std::string dip)
+{
+    if (n_route == 0)
+    {
+        route_list *node = (route_list *)malloc(sizeof(route_list));
+        node->sip = sip;
+        node->dip = dip;
+        struct timespec timestamp;
+        clock_gettime(0, &timestamp);
+        long long sec = timestamp.tv_sec;
+        long long nsec = timestamp.tv_nsec;
+        long long now = sec * 1000000000 + nsec;
+        node->tm = now;
+        route_head = node;
+        route_end = node;
+        routes[sip][dip].tm = now;
+        n_route += 1;
+        return;
+    }
+    if (n_route >= route_max) // 策略路由已满
+    {
+        if (routes[sip][dip].del) // 需要添加新路由，删除一条旧的
+        {
+            while (route_head->tm < routes[sip][dip].tm) // 删除更新过的策略路由
+            {
+                route_list *_head = route_head->next;
+                free(route_head);
+                route_head = _head;
+            }
+            // 删除最久的策略路由
+            route_list *_head = route_head->next;
+            free(route_head);
+            route_head = _head;
+        }
+    }
+    route_list *node = (route_list *)malloc(sizeof(route_list));
+    node->sip = sip;
+    node->dip = dip;
+    struct timespec timestamp;
+    clock_gettime(0, &timestamp);
+    long long sec = timestamp.tv_sec;
+    long long nsec = timestamp.tv_nsec;
+    long long now = sec * 1000000000 + nsec;
+    node->tm = now;
+    route_end->next = node;
+    route_end = node;
+    routes[sip][dip].tm = now;
+    n_route += 1;
+    return;
+}
+
 // 计算源目节点之间的最宽路径
 bool get_route(std::string sip, std::string dip)
 {
@@ -764,8 +826,9 @@ void update_route()
             {
                 if (get_route(src.first, dst.first))
                 {
-                    std::cout << "update route: " << src.first << "->" << dst.first << " tx_rate :" << dst.second << endl;
-                    save_route(src.first, dst.first);
+                    add_route(src.first, dst.first); // 更新保存的路由信息
+                    // std::cout << "update route: " << src.first << "->" << dst.first << " tx_rate :" << dst.second << endl;
+                    save_route(src.first, dst.first); // 控制器更新路由信息
                 }
             }
         }

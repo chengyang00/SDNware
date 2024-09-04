@@ -86,7 +86,8 @@ static int pp_connect_ctx(struct pingpong_context *ctx, int port, int my_psn,
 		.dlid          = dest->lid,
 		.sl            = sl,
 		.src_path_bits = 0,
-		.port_num      = port
+		.port_num      = port,
+
 	};
 	struct ibv_qp_attr attr = {
 		.qp_state		= IBV_QPS_RTR
